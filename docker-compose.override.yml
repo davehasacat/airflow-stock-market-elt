@@ -10,11 +10,6 @@ services:
     volumes:
       - ./dbt:/usr/local/airflow/dbt
     networks:
-      - stocks-elt_default
-  worker:
-    volumes:
-      - ./dbt:/usr/local/airflow/dbt
-    networks:
       - default
       - stocks-elt_default
   triggerer:
