@@ -1,6 +1,6 @@
 # Pull Request
 
-**Closes:** # (issue number)
+Closes: # (issue number)
 
 ---
 
