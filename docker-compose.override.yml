@@ -1,3 +1,4 @@
+# customize airflow services
 services:
   webserver:
     volumes:
@@ -9,6 +10,18 @@ services:
     volumes:
       - ./dbt:/usr/local/airflow/dbt
     networks:
+      - stocks-elt_default
+  worker:
+    volumes:
+      - ./dbt:/usr/local/airflow/dbt
+    networks:
+      - default
+      - stocks-elt_default
+  triggerer:
+    volumes:
+      - ./dbt:/usr/local/airflow/dbt
+    networks:
+      - default
       - stocks-elt_default
 # create custom services
   postgres_dwh:
@@ -40,7 +53,6 @@ services:
 volumes:
   minio_data:
     driver: local
-# create network for all services
 networks:
   stocks-elt_default:
     name: stocks-elt_default
