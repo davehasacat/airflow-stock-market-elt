@@ -1,0 +1,47 @@
+services:
+  webserver:
+    volumes:
+      - ./dbt:/usr/local/airflow/dbt
+    networks:
+      - default
+      - stocks-elt_default
+  scheduler:
+    volumes:
+      - ./dbt:/usr/local/airflow/dbt
+    networks:
+      - stocks-elt_default
+# create custom services
+  postgres_dwh:
+    image: postgres:12
+    container_name: postgres_dwh
+    ports:
+      - "5433:5432"  # create host port on 5433 as default airflow postgres container uses 5432
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    networks:
+      - stocks-elt_default  # add services to same network
+  minio:
+    image: minio/minio
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - stocks-elt_default  # add services to same network
+# add minio folder to airflow after connection is created
+volumes:
+  minio_data:
+    driver: local
+# create network for all services
+networks:
+  stocks-elt_default:
+    name: stocks-elt_default
+    driver: bridge
