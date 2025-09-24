@@ -64,7 +64,6 @@ def stocks_polygon_ingest_dag():
         tickers_in_batch = tickers_string.splitlines()
         
         processed_s3_keys = []
-        # NOTE: The original date logic was redundant. It always subtracted one day. This is a simplified version.
         target_date = pendulum.parse(execution_date).subtract(days=1).to_date_string()
         
         conn = BaseHook.get_connection('polygon_api')
@@ -84,19 +83,26 @@ def stocks_polygon_ingest_dag():
                 processed_s3_keys.append(s3_key)
 
         return processed_s3_keys
+    # Task to flatten the list of lists from the mapped task
+    @task
+    def flatten_s3_key_list(nested_list: list[list[str]]) -> list[str]:
+        """Takes the nested list from the mapped task and returns a single flat list."""
+        return [key for sublist in nested_list for key in sublist if key]
 
-    # Define the DAG's task dependencies
+    # --- Define the DAG's task dependencies ---
+    
     batch_keys = get_and_batch_tickers_to_s3()
-    processed_keys = process_ticker_batch.expand(batch_s3_key=batch_keys)
+    processed_keys_nested = process_ticker_batch.expand(batch_s3_key=batch_keys)
+    
+    # Call the flattening task
+    s3_keys_flat = flatten_s3_key_list(processed_keys_nested)
 
-    # Use the TriggerDagRunOperator as a standalone task
-    # It will automatically collect the output from the upstream mapped task 'processed_keys'
-    TriggerDagRunOperator(
+    # Trigger the downstream DAG, passing the clean, flat list of keys
+    trigger_downstream_dag = TriggerDagRunOperator(
         task_id="trigger_load_dag",
         trigger_dag_id="stocks_polygon_load",
-        conf={"s3_keys": "{{ task_instance.xcom_pull(task_ids='process_ticker_batch', key='return_value') }}"},
-        # The 'wait_for_completion=True' parameter can be useful here
-    ) << processed_keys
+        conf={"s3_keys": s3_keys_flat},  # Pass the XComArg from the flatten task directly
+        wait_for_completion=True, # Optional: wait for the triggered DAG to finish
+    )
 
-# Instantiate the DAG
 stocks_polygon_ingest_dag()
