@@ -102,7 +102,7 @@ def stocks_polygon_ingest_dag():
         task_id="trigger_load_dag",
         trigger_dag_id="stocks_polygon_load",
         conf={"s3_keys": s3_keys_flat},  # Pass the XComArg from the flatten task directly
-        wait_for_completion=True, # Optional: wait for the triggered DAG to finish
+        wait_for_completion=False, # Optional: wait for the triggered DAG to finish
     )
 
 stocks_polygon_ingest_dag()

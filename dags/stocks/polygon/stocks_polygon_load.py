@@ -99,7 +99,7 @@ def stocks_polygon_load_dag():
 
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
 
-        # --- REVISED: Best-Practice Schema Definition ---
+        # --- Best-Practice Schema Definition ---
         create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
             ticker TEXT NOT NULL,
