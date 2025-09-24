@@ -5,6 +5,10 @@
 # For questions, reach out to: https://support.astronomer.io
 # For issues create an issue ticket here: https://github.com/astronomer/astro-cli/issues
 
+# NOTE: YOUR .GITIGNORE FOLDER WILL INCLUDE THIS FILE AFTER RUNNING `astro dev init`.
+# I EXCLUDED IT FROM MINE FOR DEMONSTRATION PURPOSES ONLY
+# LEAVE YOUR `airflow_settings.yaml` IN YOUR .GITIGNORE FOLDER AS IT CAN CONTAIN SENSITIVE INFO, DEPENDING ON THE PROJECT
+
 airflow:
   pools:
     - pool_name: "api_pool"
