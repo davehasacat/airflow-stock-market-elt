@@ -1,16 +1,19 @@
 from __future__ import annotations
-import pendulum
-import os
-import requests
+
 import json
+import os
+from typing import Any, Dict
+
+import pendulum
+import requests
 from airflow.decorators import dag, task
-from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.hooks.base import BaseHook
 from airflow.operators.trigger_dagrun import TriggerDagRunOperator
-from typing import Dict, Any
+from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 
 # Import the shared Dataset object. This allows this DAG to act as a "producer".
 from datasets import S3_RAW_DATA_DATASET
+
 
 @dag(
     dag_id="stocks_polygon_ingest",
@@ -41,31 +44,31 @@ def stocks_polygon_ingest_dag():
         """
         conn = BaseHook.get_connection('polygon_api')
         api_key = conn.password
-        
-        # This is the fix: read the scheme and host separately
         scheme = conn.conn_type
         host = conn.host
-        
+
         if not all([api_key, scheme, host]):
             raise ValueError("API key, host, or scheme not found in Airflow connection 'polygon_api'.")
-            
-        # Construct the full base URL
+
         api_host = f"{scheme}://{host}"
         
         return {"api_key": api_key, "api_host": api_host}
 
     @task(pool="api_pool")
-    def get_and_batch_tickers_to_s3(polygon_conn: dict, **kwargs) -> list[str]:
+    def get_and_batch_tickers_to_s3(**kwargs) -> list[str]:
         """
         Fetches the complete list of active stock tickers from Polygon.io for a
         specific date, splits them into smaller batches of 500, and uploads
         each batch as a text file to S3.
         """
+        # Pull the connection details directly from the upstream task
+        ti = kwargs["ti"]
+        polygon_conn = ti.xcom_pull(task_ids='get_polygon_connection_details')
         api_key = polygon_conn["api_key"]
         api_host = polygon_conn["api_host"]
+
         execution_date = kwargs["ds"]
         all_tickers = []
-        # The 'date' parameter makes this task idempotent.
         next_url = f"{api_host}/v3/reference/tickers?active=true&market=stocks&type=CS&date={execution_date}&limit=1000&apiKey={api_key}"
 
         while next_url:
@@ -89,14 +92,18 @@ def stocks_polygon_ingest_dag():
         return batch_file_keys
 
     @task(retries=3, retry_delay=pendulum.duration(minutes=5), pool="api_pool")
-    def process_ticker_batch(batch_s3_key: str, polygon_conn: dict, **kwargs) -> list[str]:
+    def process_ticker_batch(batch_s3_key: str, **kwargs) -> list[str]:
         """
         Reads a batch of tickers from an S3 file, fetches the daily OHLCV
         data for each ticker for the target date, and uploads the raw JSON
         response to S3.
         """
+        # Pull the connection details directly from the upstream task
+        ti = kwargs["ti"]
+        polygon_conn = ti.xcom_pull(task_ids='get_polygon_connection_details')
         api_key = polygon_conn["api_key"]
         api_host = polygon_conn["api_host"]
+        
         execution_date = kwargs["ds"]
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         tickers_string = s3_hook.read_key(key=batch_s3_key, bucket_name=BUCKET_NAME)
@@ -132,20 +139,22 @@ def stocks_polygon_ingest_dag():
 
     # Task Dependencies
     polygon_connection = get_polygon_connection_details()
-    batch_keys = get_and_batch_tickers_to_s3(polygon_conn=polygon_connection)
-    processed_keys = process_ticker_batch.expand(
-        batch_s3_key=batch_keys,
-        polygon_conn=polygon_connection
-    )
+    batch_keys = get_and_batch_tickers_to_s3()
+    
+    # Explicitly set the upstream dependency so the tasks know to wait
+    polygon_connection >> batch_keys
+
+    processed_keys = process_ticker_batch.expand(batch_s3_key=batch_keys)
     s3_keys_to_load = flatten_s3_keys(s3_keys_nested=processed_keys)
 
     trigger_load_dag = TriggerDagRunOperator(
         task_id="trigger_stocks_polygon_load",
         trigger_dag_id="stocks_polygon_load",
         conf={"s3_keys": "{{ ti.xcom_pull(task_ids='flatten_s3_keys') }}"},
-        outlets=[S3_RAW_DATA_DATASET]  # This produces to the Dataset
+        outlets=[S3_RAW_DATA_DATASET]
     )
 
     s3_keys_to_load >> check_for_data(s3_keys=s3_keys_to_load) >> trigger_load_dag
+
 
 stocks_polygon_ingest_dag()
