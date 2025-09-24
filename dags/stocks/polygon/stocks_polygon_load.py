@@ -8,38 +8,41 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 @dag(
     dag_id="stocks_polygon_load",
-    start_date=pendulum.datetime(2025, 9, 22, tz="UTC"),
+    start_date=pendulum.datetime(2025, 9, 21, tz="UTC"),
     schedule=None,
     catchup=False,
     tags=["load", "polygon"],
     doc_md="""
-    ### Stocks Polygon Load DAG (Incremental, Batch)
+    ### Stocks Polygon Load DAG (Best Practice Schema)
 
-    This DAG is triggered by `stocks_polygon_ingest`. It groups a large list of S3
-    keys into batches and processes these batches in parallel before performing
-    an incremental load into Postgres.
+    This DAG is triggered by `stocks_polygon_ingest`. It creates the target table
+    with a robust, best-practice schema if it doesn't exist, then processes
+    batches of S3 keys in parallel to perform an incremental load (UPSERT)
+    into the Postgres data warehouse.
     """,
 )
 def stocks_polygon_load_dag():
+    # --- DAG Configuration ---
     S3_CONN_ID = os.getenv("S3_CONN_ID", "minio_s3")
     POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
     BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
-    POSTGRES_TABLE = "raw_polygon_stock_bars"
-    BATCH_SIZE = 500 # Process 500 files per mapped task
+    POSTGRES_TABLE = "source_polygon_stock_bars_daily"
+    BATCH_SIZE = 500
 
     @task
     def get_s3_keys_from_trigger(**kwargs) -> list[str]:
         """Pulls the list of S3 keys from the dag_run.conf dictionary."""
-        dag_run = kwargs["dag_run"]
+        dag_run = kwargs.get("dag_run")
+        if not dag_run or not dag_run.conf:
+            raise ValueError("DAG run or configuration is missing.")
+            
         s3_keys = dag_run.conf.get("s3_keys")
-        
         if not s3_keys:
             raise ValueError("No 's3_keys' found in DAG run configuration. Aborting.")
         
         print(f"Received {len(s3_keys)} S3 keys to process.")
         return s3_keys
 
-    # --- NEW TASK TO CREATE BATCHES ---
     @task
     def batch_s3_keys(s3_keys: list[str]) -> list[list[str]]:
         """Groups the incoming list of S3 keys into smaller batches."""
@@ -47,7 +50,6 @@ def stocks_polygon_load_dag():
         print(f"Created {len(batches)} batches of approximately {BATCH_SIZE} keys each.")
         return batches
 
-    # --- MODIFIED TASK TO PROCESS A BATCH ---
     @task
     def transform_batch(batch_of_keys: list[str]) -> list[dict]:
         """Reads and transforms a batch of JSON files from S3."""
@@ -55,28 +57,31 @@ def stocks_polygon_load_dag():
         clean_records = []
         
         for s3_key in batch_of_keys:
-            file_content = s3_hook.read_key(key=s3_key, bucket_name=BUCKET_NAME)
-            data = json.loads(file_content)
+            try:
+                file_content = s3_hook.read_key(key=s3_key, bucket_name=BUCKET_NAME)
+                data = json.loads(file_content)
 
-            if data.get("resultsCount") == 1 and data.get("results"):
-                result = data["results"][0]
-                trade_date = pendulum.from_timestamp(result["t"] / 1000).to_date_string()
-                
-                clean_record = {
-                    "ticker": data["ticker"],
-                    "trade_date": trade_date,
-                    "volume": result["v"],
-                    "vwap": result.get("vw"),
-                    "open": result["o"],
-                    "close": result["c"],
-                    "high": result["h"],
-                    "low": result["l"],
-                    "transactions": result["n"],
-                }
-                clean_records.append(clean_record)
+                if data.get("resultsCount") == 1 and data.get("results"):
+                    result = data["results"][0]
+                    trade_date = pendulum.from_timestamp(result["t"] / 1000).to_date_string()
+                    
+                    clean_record = {
+                        "ticker": data["ticker"],
+                        "trade_date": trade_date,
+                        "volume": result.get("v"),
+                        "vwap": result.get("vw"),
+                        "open": result.get("o"),
+                        "close": result.get("c"),
+                        "high": result.get("h"),
+                        "low": result.get("l"),
+                        "transactions": result.get("n"),
+                    }
+                    clean_records.append(clean_record)
+            except Exception as e:
+                print(f"Error processing file {s3_key}: {e}")
+                continue
         return clean_records
 
-    # --- NEW TASK TO FLATTEN RESULTS ---
     @task
     def flatten_results(nested_list: list[list[dict]]) -> list[dict]:
         """Takes the nested list of results and returns a single flat list."""
@@ -84,38 +89,59 @@ def stocks_polygon_load_dag():
 
     @task
     def load_to_postgres_incremental(clean_records: list[dict]):
-        """Performs an incremental load (UPSERT) into the target Postgres table."""
+        """
+        Ensures the target table exists with the correct schema, then performs
+        an incremental load (UPSERT).
+        """
         if not clean_records:
             print("No new records to load. Skipping warehouse operation.")
             return
 
+        pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+
+        # --- REVISED: Best-Practice Schema Definition ---
+        create_table_sql = f"""
+        CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
+            ticker TEXT NOT NULL,
+            trade_date DATE NOT NULL,
+            "open" NUMERIC(19, 4),
+            high NUMERIC(19, 4),
+            low NUMERIC(19, 4),
+            "close" NUMERIC(19, 4),
+            volume BIGINT,
+            vwap NUMERIC(19, 4),
+            transactions BIGINT,
+            inserted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+            PRIMARY KEY (ticker, trade_date)
+        );
+        """
+        pg_hook.run(create_table_sql)
+        
         print(f"Preparing to incrementally load {len(clean_records)} records into {POSTGRES_TABLE}.")
         
-        pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+        rows_to_insert = [tuple(rec.values()) for rec in clean_records]
         target_fields = list(clean_records[0].keys())
-        conflict_cols = ["ticker", "trade_date"]
-
+        
+        # We must now also update the `inserted_at` timestamp on conflict
+        update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in target_fields if col not in ["ticker", "trade_date"]]
+        update_cols.append('"inserted_at" = NOW()')
+        
         pg_hook.insert_rows(
             table=POSTGRES_TABLE,
-            rows=clean_records,
+            rows=rows_to_insert,
             target_fields=target_fields,
             commit_every=1000,
             on_conflict="do_update",
-            conflict_target=conflict_cols,
-            index_elements=target_fields
+            conflict_target=["ticker", "trade_date"],
+            index_elements=update_cols
         )
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
-    # --- DEFINE THE NEW TASK FLOW ---
+    # --- Task Flow Definition ---
     s3_keys = get_s3_keys_from_trigger()
     key_batches = batch_s3_keys(s3_keys)
-    
-    # Map over the batches of keys, not the individual keys
     transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
-    
-    # Flatten the list of lists before loading
     flat_records = flatten_results(transformed_batches)
-    
     load_to_postgres_incremental(flat_records)
 
 stocks_polygon_load_dag()
