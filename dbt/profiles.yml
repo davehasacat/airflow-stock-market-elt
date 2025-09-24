@@ -1,0 +1,18 @@
+# dbt/profiles.yml
+
+# This file defines connection profiles for dbt.
+# For more information on configuring this file, see the dbt documentation:
+# https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml
+
+stock_market_elt:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: postgres_dwh # The service name from your docker-compose file
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      port: 5432
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: public # The schema where dbt will build models
+      threads: 4 # Number of parallel threads dbt can use
