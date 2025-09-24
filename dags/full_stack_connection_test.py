@@ -5,7 +5,7 @@ import pendulum
 from airflow.models.dag import DAG
 from airflow.providers.amazon.aws.operators.s3 import S3ListOperator
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
-from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, RenderConfig, ExecutionConfig
+# from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, RenderConfig, ExecutionConfig
 
 with DAG(
     dag_id="full_stack_connection_test",
