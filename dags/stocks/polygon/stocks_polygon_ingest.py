@@ -12,7 +12,7 @@ from airflow.models import Variable
 # Define the DAG
 @dag(
     dag_id="stocks_polygon_ingest",
-    start_date=pendulum.datetime(2025, 9, 21, tz="UTC"),
+    start_date=pendulum.datetime(2025, 9, 1, tz="UTC"),
     schedule="@daily",
     catchup=True,
     tags=["ingestion", "polygon"],
