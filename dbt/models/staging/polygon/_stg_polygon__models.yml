@@ -1,10 +1,18 @@
-# dbt/models/staging/schema.yml
-
 version: 2
 
 sources:
-  - name: public # This is the schema your raw data is in
+  - name: public
     description: "Raw data loaded from the stock market ELT pipeline."
     tables:
       - name: source_polygon_stock_bars_daily
         description: "Raw daily OHLCV data for all tickers from Polygon.io."
+
+models:
+  - name: stg_polygon__stock_bars_daily
+    description: "Cleans and renames the raw Polygon.io stock bar data."
+    columns:
+      - name: stock_bar_id
+        description: "The unique identifier for a single day's stock bar."
+        tests:
+          - unique
+          - not_null
