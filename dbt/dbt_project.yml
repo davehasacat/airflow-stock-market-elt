@@ -23,7 +23,6 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
-# These are configurations that will be applied to all models in the 'staging' subdirectory.
 models:
   stock_market_elt:
     # Applies to all models in the project
