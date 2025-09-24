@@ -10,7 +10,7 @@ The ELT process is orchestrated by three modular and event-driven Airflow DAGs t
 
 2. **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG, this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
 
-3. **`stocks_dbt_polygon_transform`**: Once the raw data has been successfully loaded into the warehouse, this DAG is triggered to run the `dbt build` command. This executes all the dbt models, which transform the raw data into a clean, analytics-ready staging model (`int_polygon__stock_bars_daily`), and runs data quality tests to ensure the integrity of the transformed data.
+3. **`stocks_polygon_dbt_transform`**: Once the raw data has been successfully loaded into the warehouse, this DAG is triggered to run the `dbt build` command. This executes all the dbt models, which transform the raw data into a clean, analytics-ready staging model (`int_polygon__stock_bars_daily`), and runs data quality tests to ensure the integrity of the transformed data.
 
 ### Proof of Success
 
@@ -65,7 +65,7 @@ The data is successfully transformed and available for querying in the data ware
 This project serves as a strong foundation for a robust financial data platform. The next steps for expanding this project include:
 
 * [x] **Migrate to Polygon.io for Scalable Ingestion**: Transition from Alpha Vantage to a professional-grade API. This includes refactoring the controller DAG to dynamically fetch the entire list of available stock tickers, allowing the pipeline to automatically scale from a few tickers to thousands without code changes.
-* [ ] **Implement an Incremental Loading Strategy**: Evolve the data loading pattern from "truncate and load" to an incremental approach. This will preserve historical data and significantly improve performance by only processing new or updated records on each run.
+* [x] **Implement an Incremental Loading Strategy**: Evolve the data loading pattern from "truncate and load" to an incremental approach. This will preserve historical data and significantly improve performance by only processing new or updated records on each run.
 * [ ] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
 * [ ] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
