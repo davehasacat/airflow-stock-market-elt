@@ -78,16 +78,23 @@ LIMIT 5;
 
 ### Configuration
 
-1. **Environment Variables**: Create a file named `.env` in the project root. Copy the contents of `.env.example` (if you've created one) into it and fill in your `POLYGON_API_KEY`. The rest of the variables are pre-configured for the local environment.
+1. **Environment Variables**: Create a file named `.env` in the project root. Copy the contents of `.env.example` into it and fill in your `POLYGON_API_KEY`. The rest of the variables are pre-configured for the local environment.
 2. **dbt Profile**: The `dbt/profiles.yml` file is configured to read credentials from the `.env` file. No changes are needed.
 
 ### Running the Project
 
 1. **Start the environment** with a single command from your project's root directory:
 
-2. **Create the Minio Bucket**:
+    ```bash
+    astro dev start
+    ```
 
-3. **Run the Full Pipeline**:
+2. **Create the Minio Bucket via the UI**:
+    * Navigate to the Minio console at [http://localhost:9001](http://localhost:9001).
+    * Log in with the credentials from your `.env` file (default is `minioadmin` / `minioadmin`).
+    * Click the **Create Bucket** button, enter the name `test`, and click **Create Bucket**.
+
+3. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline.
 
 ---
 
