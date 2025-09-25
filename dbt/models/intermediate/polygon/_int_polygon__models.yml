@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: int_polygon__stock_prices_enriched
+  - name: int_polygon__stock_bars_enriched
     description: "Enriches the daily stock bar data with calculated technical indicators like moving averages. This model is incremental."
     columns:
       - name: stock_bar_id
