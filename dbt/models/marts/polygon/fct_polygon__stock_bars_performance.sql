@@ -8,6 +8,6 @@
 
 with source as (
     select * from {{ ref('int_polygon__stock_bars_enriched') }}
-),
+)
 
 select * from source
