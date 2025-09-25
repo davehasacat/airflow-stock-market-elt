@@ -12,7 +12,7 @@ from dags.datasets import S3_RAW_DATA_DATASET, POSTGRES_DWH_RAW_DATASET
 
 @dag(
     dag_id="stocks_polygon_load",
-    start_date=pendulum.datetime(2025, 9, 23, tz="UTC"),
+    start_date=pendulum.datetime(2025, 9, 2, tz="UTC"),
     # This DAG now runs WHEN the S3 raw data is ready
     schedule=[S3_RAW_DATA_DATASET],
     catchup=False,
@@ -32,7 +32,7 @@ def stocks_polygon_load_dag():
     POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
     BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
     POSTGRES_TABLE = "source_polygon_stock_bars_daily"
-    BATCH_SIZE = 500
+    BATCH_SIZE = 250
 
     @task
     def get_s3_keys_from_trigger(**kwargs) -> list[str]:

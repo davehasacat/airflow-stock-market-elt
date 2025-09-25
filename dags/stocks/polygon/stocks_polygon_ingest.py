@@ -12,7 +12,7 @@ from airflow.models import Variable
 # Define the DAG
 @dag(
     dag_id="stocks_polygon_ingest",
-    start_date=pendulum.datetime(2025, 9, 23, tz="UTC"),
+    start_date=pendulum.datetime(2025, 9, 2, tz="UTC"),
     schedule="@daily",
     catchup=True,
     tags=["ingestion", "polygon"],
@@ -43,7 +43,7 @@ def stocks_polygon_ingest_dag():
                 next_url += f"&apiKey={api_key}"
 
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-        batch_size = 500
+        batch_size = 250
         batch_file_keys = []
         for i in range(0, len(all_tickers), batch_size):
             batch = all_tickers[i:i + batch_size]
