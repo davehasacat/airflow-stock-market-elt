@@ -57,7 +57,7 @@ def full_stack_connection_test_dag():
             profiles_yml_filepath=os.path.join(DBT_PROJECT_DIR, "profiles.yml"),
         ),
         execution_config=ExecutionConfig(dbt_executable_path=DBT_EXECUTABLE_PATH),
-        operator_args={"select": "stg_polygon__stock_bars_daily"},
+        operator_args={"select": "source_polygon_stock_bars_daily"},
     )
 
     # Define task dependencies
