@@ -6,11 +6,11 @@ This project is a complete, containerized ELT (Extract, Load, Transform) environ
 
 The ELT process is orchestrated by three modular and data-driven Airflow DAGs that form a seamless, automated workflow. The architecture is designed for high throughput and scalability, capable of ingesting and processing data for thousands of stock tickers efficiently.
 
-1.  **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage.
+1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage.
 
-2.  **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG (via Airflow Datasets), this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
+2. **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG (via Airflow Datasets), this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
 
-3.  **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces a corresponding **Dataset** that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
+3. **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces a corresponding **Dataset** that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
     * A clean, casted staging model (`stg_polygon__stock_bars_casted`).
     * An enriched intermediate model with technical indicators (`int_polygon__stock_bars_enriched`).
     * A final, analytics-ready facts table (`fct_polygon__stock_bars_performance`).
@@ -26,6 +26,7 @@ The screenshots below show a successful, end-to-end run of the entire orchestrat
 <img width="1034" height="515" alt="Capture2" src="https://github.com/user-attachments/assets/7e77a779-6f21-4fc7-8dc5-69f2e934d213" />
 
 <img width="1096" height="458" alt="Capture3" src="https://github.com/user-attachments/assets/4fbffa66-42dc-4b63-9797-96033fd1297b" />
+
 
 The data is successfully transformed through staging, intermediate, and marts layers and is available for querying in the data warehouse. The final `fct_polygon__stock_bars_performance` table provides a clean, analytics-ready dataset with calculated metrics, as shown by the following query result:
 
@@ -45,6 +46,8 @@ ORDER BY
     trade_date DESC
 LIMIT 5;
 ```
+
+<img width="814" height="183" alt="Capture4" src="https://github.com/user-attachments/assets/3defc071-5ac4-4e3f-a68d-dea266939505" />
 
 ---
 
@@ -94,7 +97,7 @@ This project serves as a strong foundation for a robust financial data platform.
 
 * [x] **Migrate to Polygon.io for Scalable Ingestion**: Transition from Alpha Vantage to a professional-grade API. This includes refactoring the controller DAG to dynamically fetch the entire list of available stock tickers, allowing the pipeline to automatically scale from a few tickers to thousands without code changes.
 * [x] **Implement an Incremental Loading Strategy**: Evolve the data loading pattern from "truncate and load" to an incremental approach. This will preserve historical data and significantly improve performance by only processing new or updated records on each run.
-* [ ] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
+* [x] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
 * [ ] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
 
