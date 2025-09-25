@@ -4,19 +4,47 @@ This project is a complete, containerized ELT (Extract, Load, Transform) environ
 
 ## Pipeline Architecture
 
-The ELT process is orchestrated by three modular and event-driven Airflow DAGs that form a seamless, automated workflow. The architecture is designed for high throughput and scalability, capable of ingesting and processing data for thousands of stock tickers efficiently.
+The ELT process is orchestrated by three modular and data-driven Airflow DAGs that form a seamless, automated workflow. The architecture is designed for high throughput and scalability, capable of ingesting and processing data for thousands of stock tickers efficiently.
 
-1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage. This dynamic, batch-based approach allows the DAG to scale to any number of tickers without hitting Airflow's internal limitations.
+1.  **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage.
 
-2. **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG, this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
+2.  **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG (via Airflow Datasets), this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
 
-3. **`stocks_polygon_dbt_transform`**: Once the raw data has been successfully loaded into the warehouse, this DAG is triggered to run the `dbt build` command. This executes all the dbt models, which transform the raw data into a clean, analytics-ready staging model (`int_polygon__stock_bars_daily`), and runs data quality tests to ensure the integrity of the transformed data.
+3.  **`stocks_polygon_dbt_transform`**: Once the raw data has been successfully loaded, this DAG is triggered (via Airflow Datasets) to run the `dbt build` command. This executes all the dbt models, which transform the raw data into:
+    * A clean, casted staging model (`stg_polygon__stock_bars_casted`).
+    * An enriched intermediate model with technical indicators (`int_polygon__stock_bars_enriched`).
+    * A final, analytics-ready facts table (`fct_polygon__stock_bars_performance`).
+    It also runs data quality tests to ensure the integrity of the transformed data.
 
 ### Proof of Success
 
-The screenshot below shows a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution of all three DAGs.
+The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution and data-driven scheduling of all three DAGs.
 
-The data is successfully transformed and available for querying in the data warehouse, as shown by the following query result from the `int_polygon__stock_bars_daily` table:
+<img width="1240" height="452" alt="Capture" src="https://github.com/user-attachments/assets/412593ee-65e1-4437-8c8b-56772a970171" />
+
+<img width="1034" height="515" alt="Capture2" src="https://github.com/user-attachments/assets/7e77a779-6f21-4fc7-8dc5-69f2e934d213" />
+
+<img width="1096" height="458" alt="Capture3" src="https://github.com/user-attachments/assets/4fbffa66-42dc-4b63-9797-96033fd1297b" />
+
+The data is successfully transformed through staging, intermediate, and marts layers and is available for querying in the data warehouse. The final `fct_polygon__stock_bars_performance` table provides a clean, analytics-ready dataset with calculated metrics, as shown by the following query result:
+
+```sql
+-- Querying the final marts table for enriched performance data
+SELECT
+    ticker,
+    trade_date,
+    close_price,
+    moving_avg_50d,
+    price_change_1d,
+    daily_price_range
+FROM
+    public.fct_polygon__stock_bars_performance
+WHERE
+    ticker = 'AAPL'
+ORDER BY
+    trade_date DESC
+LIMIT 5;
+```
 
 ---
 
