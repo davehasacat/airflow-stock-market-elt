@@ -3,13 +3,18 @@ import pendulum
 import json
 import os
 from airflow.decorators import dag, task
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
+# Import the shared Dataset objects
+from dags.datasets import S3_RAW_DATA_DATASET, POSTGRES_DWH_RAW_DATASET
+
 @dag(
     dag_id="stocks_polygon_load",
-    start_date=pendulum.datetime(2025, 9, 18, tz="UTC"),
-    schedule=None,
+    start_date=pendulum.datetime(2025, 9, 23, tz="UTC"),
+    # This DAG now runs WHEN the S3 raw data is ready
+    schedule=[S3_RAW_DATA_DATASET],
     catchup=False,
     tags=["load", "polygon"],
     doc_md="""
@@ -87,7 +92,7 @@ def stocks_polygon_load_dag():
         """Takes the nested list of results and returns a single flat list."""
         return [record for batch in nested_list for record in batch if record]
 
-    @task
+    @task(outlets=[POSTGRES_DWH_RAW_DATASET])  # task now produces an update to the postgres dataset
     def load_to_postgres_incremental(clean_records: list[dict]):
         """
         Ensures the target table exists with the correct schema, then performs
@@ -138,7 +143,23 @@ def stocks_polygon_load_dag():
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
     # --- Task Flow Definition ---
-    s3_keys = get_s3_keys_from_trigger()
+    # The get_s3_keys task needs to be adapted slightly to read from the dataset event
+    @task
+    def get_s3_keys_from_dataset_trigger(**kwargs) -> list[str]:
+        """Pulls the list of S3 keys from the triggering dataset event."""
+        # When scheduled by a dataset, the conf is populated from the trigger's `extra` param
+        dag_run = kwargs.get("dag_run")
+        if not dag_run or not dag_run.conf:
+            raise ValueError("DAG run or configuration is missing.")
+        
+        s3_keys = dag_run.conf.get("s3_keys")
+        if not s3_keys:
+            raise ValueError("No 's3_keys' found in DAG run configuration. Aborting.")
+        
+        print(f"Received {len(s3_keys)} S3 keys to process from dataset trigger.")
+        return s3_keys
+
+    s3_keys = get_s3_keys_from_dataset_trigger()
     key_batches = batch_s3_keys(s3_keys)
     transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
     flat_records = flatten_results(transformed_batches)

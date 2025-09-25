@@ -10,8 +10,8 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
 
 # --- DAG Configuration ---
-DBT_PROJECT_DIR = "/usr/local/airflow/dbt"
-DBT_EXECUTABLE_PATH = "/usr/local/airflow/dbt_venv/bin/dbt"
+DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR")
+DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
 S3_CONN_ID = os.getenv("S3_CONN_ID", "minio_s3")
 POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
 BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
