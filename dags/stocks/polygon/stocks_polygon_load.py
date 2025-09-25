@@ -3,6 +3,7 @@ import pendulum
 import json
 import os
 from airflow.decorators import dag, task
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
@@ -142,6 +143,17 @@ def stocks_polygon_load_dag():
     key_batches = batch_s3_keys(s3_keys)
     transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
     flat_records = flatten_results(transformed_batches)
-    load_to_postgres_incremental(flat_records)
+    load_task = load_to_postgres_incremental(flat_records)
+
+    # --- Trigger the dbt DAG ---
+    trigger_dbt_transform_dag = TriggerDagRunOperator(
+        task_id="trigger_dbt_transform",
+        trigger_dag_id="stocks_polygon_dbt_transform",
+        wait_for_completion=True,
+        # Only trigger if the load task actually inserted records
+        trigger_rule="all_success",
+    )
+    
+    load_task >> trigger_dbt_transform_dag
 
 stocks_polygon_load_dag()
