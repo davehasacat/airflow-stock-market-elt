@@ -6,6 +6,9 @@ import pendulum
 from airflow.decorators import dag
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
 
+# Import the shared Dataset objects
+from dags.datasets import POSTGRES_DWH_RAW_DATASET
+
 # --- dbt Configuration ---
 DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR")
 DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
@@ -13,7 +16,8 @@ DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
 @dag(
     dag_id="stocks_polygon_dbt_transform",
     start_date=pendulum.datetime(2025, 9, 17, tz="UTC"),
-    schedule=None,  # This DAG is triggered, not scheduled
+    # This DAG now runs ONLY WHEN the postgres DWH raw table is updated
+    schedule=[POSTGRES_DWH_RAW_DATASET],
     catchup=False,
     tags=["dbt", "transform", "polygon"],
     doc_md="""
