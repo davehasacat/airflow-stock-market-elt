@@ -25,7 +25,7 @@ The screenshots below show a successful, end-to-end run of the entire orchestrat
 
 <img width="1034" height="515" alt="Capture2" src="https://github.com/user-attachments/assets/7e77a779-6f21-4fc7-8dc5-69f2e934d213" />
 
-_Note: the failed runs are for non-trading days i.e. days that do not have stock data_
+_Note: the failed `load` runs are for non-trading days i.e. days that do not have stock data_
 
 <img width="1096" height="458" alt="Capture3" src="https://github.com/user-attachments/assets/4fbffa66-42dc-4b63-9797-96033fd1297b" />
 
