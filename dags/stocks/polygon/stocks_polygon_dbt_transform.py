@@ -15,7 +15,7 @@ DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
 
 @dag(
     dag_id="stocks_polygon_dbt_transform",
-    start_date=pendulum.datetime(2025, 9, 17, tz="UTC"),
+    start_date=pendulum.datetime(2025, 9, 23, tz="UTC"),
     # This DAG now runs ONLY WHEN the postgres DWH raw table is updated
     schedule=[POSTGRES_DWH_RAW_DATASET],
     catchup=False,
@@ -42,8 +42,9 @@ def stocks_polygon_dbt_transform_dag():
             profiles_yml_filepath=os.path.join(DBT_PROJECT_DIR, "profiles.yml"),
         ),
         execution_config=ExecutionConfig(dbt_executable_path=DBT_EXECUTABLE_PATH),
-        # The `dbt_cmd="build"` argument tells Cosmos to run `dbt build`
-        operator_args={"dbt_cmd": "build"},
+        operator_args={
+            "dbt_cmd": "build"
+        }
     )
 
 stocks_polygon_dbt_transform_dag()
