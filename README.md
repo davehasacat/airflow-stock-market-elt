@@ -1,4 +1,4 @@
-# Airflow Stocks ELT Project
+# Airflow Stock Market ELT Pipeline
 
 This project is a complete, containerized ELT (Extract, Load, Transform) environment designed for processing stock data from the [Polygon.io](https://polygon.io/) API. It uses a modern data stack to orchestrate a highly parallelized and scalable data pipeline, manage transformations with dbt, and store data in a Postgres data warehouse, providing a robust foundation for financial analysis and backtesting.
 
@@ -10,10 +10,11 @@ The ELT process is orchestrated by three modular and data-driven Airflow DAGs th
 
 2.  **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG (via Airflow Datasets), this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
 
-3.  **`stocks_polygon_dbt_transform`**: Once the raw data has been successfully loaded, this DAG is triggered (via Airflow Datasets) to run the `dbt build` command. This executes all the dbt models, which transform the raw data into:
+3.  **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces a corresponding **Dataset** that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
     * A clean, casted staging model (`stg_polygon__stock_bars_casted`).
     * An enriched intermediate model with technical indicators (`int_polygon__stock_bars_enriched`).
     * A final, analytics-ready facts table (`fct_polygon__stock_bars_performance`).
+
     It also runs data quality tests to ensure the integrity of the transformed data.
 
 ### Proof of Success
@@ -35,12 +36,11 @@ SELECT
     trade_date,
     close_price,
     moving_avg_50d,
-    price_change_1d,
     daily_price_range
 FROM
     public.fct_polygon__stock_bars_performance
 WHERE
-    ticker = 'AAPL'
+    ticker = 'GOOGL'
 ORDER BY
     trade_date DESC
 LIMIT 5;
