@@ -8,7 +8,7 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 @dag(
     dag_id="stocks_polygon_load",
-    start_date=pendulum.datetime(2025, 9, 1, tz="UTC"),
+    start_date=pendulum.datetime(2025, 9, 18, tz="UTC"),
     schedule=None,
     catchup=False,
     tags=["load", "polygon"],

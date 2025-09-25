@@ -1,0 +1,37 @@
+# dbt/dbt_project.yml
+
+# This file configures the dbt project.
+# For more information on configuring this file, see the dbt documentation:
+# https://docs.getdbt.com/docs/build/dbt-project-yml
+
+name: 'stock_market_elt'
+version: '1.0.0'
+config-version: 2
+
+# This is the profile that dbt will use to connect to your data warehouse.
+profile: 'stock_market_elt'
+
+# These are configurations that will be applied to all models in your project.
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+models:
+  stock_market_elt:
+    # Applies to all models in the project
+    staging:
+      # Applies to all models in the 'staging' subdirectory
+      +materialized: view
+    intermediate:
+      # Applies to all models in the 'intermediate' subdirectory
+      +materialized: view
+    marts:
+      # Applies to all models in the 'marts' subdirectory
+      +materialized: table
