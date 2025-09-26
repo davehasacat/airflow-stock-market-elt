@@ -121,5 +121,5 @@ For more detailed information on the tools and technologies used in this project
 * **[Docker Documentation](https://docs.docker.com/)**
 * **[Minio Documentation](https://docs.min.io/)**
 * **[PostgreSQL Documentation](https://www.postgresql.org/docs/)**
-* **[dbt Documentation](https://docs.getdbt.com/)**
 * **[Streamlit Documentation](https://docs.streamlit.io/)**
+* **[dbt Documentation](https://docs.getdbt.com/)**
