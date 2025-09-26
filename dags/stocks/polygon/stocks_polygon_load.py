@@ -13,8 +13,7 @@ from dags.datasets import S3_RAW_DATA_DATASET, POSTGRES_DWH_RAW_DATASET
 @dag(
     dag_id="stocks_polygon_load",
     start_date=pendulum.datetime(2025, 9, 2, tz="UTC"),
-    # This DAG now runs WHEN the S3 raw data is ready
-    schedule=[S3_RAW_DATA_DATASET],
+    schedule=[S3_RAW_DATA_DATASET], # This DAG runs WHEN the S3 raw data is ready
     catchup=False,
     tags=["load", "polygon"],
     doc_md="""
@@ -92,7 +91,7 @@ def stocks_polygon_load_dag():
         """Takes the nested list of results and returns a single flat list."""
         return [record for batch in nested_list for record in batch if record]
 
-    @task(outlets=[POSTGRES_DWH_RAW_DATASET])  # task now produces an update to the postgres dataset
+    @task(outlets=[POSTGRES_DWH_RAW_DATASET])  # task produces an update to the postgres dataset
     def load_to_postgres_incremental(clean_records: list[dict]):
         """
         Ensures the target table exists with the correct schema, then performs
@@ -127,7 +126,7 @@ def stocks_polygon_load_dag():
         rows_to_insert = [tuple(rec.values()) for rec in clean_records]
         target_fields = list(clean_records[0].keys())
         
-        # We must now also update the `inserted_at` timestamp on conflict
+        # update the `inserted_at` timestamp on conflict
         update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in target_fields if col not in ["ticker", "trade_date"]]
         update_cols.append('"inserted_at" = NOW()')
         
@@ -143,7 +142,6 @@ def stocks_polygon_load_dag():
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
     # --- Task Flow Definition ---
-    # The get_s3_keys task needs to be adapted slightly to read from the dataset event
     @task
     def get_s3_keys_from_dataset_trigger(**kwargs) -> list[str]:
         """Pulls the list of S3 keys from the triggering dataset event."""
