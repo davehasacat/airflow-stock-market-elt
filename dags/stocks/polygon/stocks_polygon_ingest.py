@@ -14,7 +14,7 @@ from dags.datasets import S3_RAW_DATA_DATASET
 # Define the DAG
 @dag(
     dag_id="stocks_polygon_ingest",
-    start_date=pendulum.datetime(2025, 7, 1, tz="UTC"),
+    start_date=pendulum.datetime(2025, 9, 2, tz="UTC"),
     schedule="0 0 * * 1-5",
     catchup=True,
     tags=["ingestion", "polygon"],
