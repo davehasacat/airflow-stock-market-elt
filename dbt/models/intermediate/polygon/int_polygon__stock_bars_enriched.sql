@@ -19,8 +19,8 @@ select
   (high_price - low_price) as daily_price_range
 from source t1
 
-{% if is_incremental() %}
 -- this filter will limit the data scanned to only the new records
+{% if is_incremental() %}
   where loaded_at > (select max(loaded_at) from {{ this }})
 {% endif %}
 )
