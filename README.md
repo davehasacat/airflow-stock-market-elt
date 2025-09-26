@@ -90,18 +90,24 @@ The tech stack has been expanded to include a Streamlit application. This provid
 
 ### Running the Project
 
-1. **Start the environment** with a single command from your project's root directory:
+1. **Build the Streamlit Image**: Before starting the Astro cluster, you need to build the custom Docker image for the Streamlit dashboard. Run the following command from your project's root directory:
+
+    ```bash
+    docker build -t streamlit-app ./streamlit
+    ```
+
+2. **Start the environment** with a single command from your project's root directory:
 
     ```bash
     astro dev start
     ```
 
-2. **Create the Minio Bucket via the UI**:
+3. **Create the Minio Bucket via the UI**:
     * Navigate to the Minio console at [http://localhost:9001](http://localhost:9001).
     * Log in with the credentials from your `.env` file (default is `minioadmin` / `minioadmin`).
     * Click the **Create Bucket** button, enter the name `test`, and click **Create Bucket**.
 
-3. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline.
+4. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline.
 
 ---
 
