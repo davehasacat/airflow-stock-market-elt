@@ -1,4 +1,4 @@
-FROM quay.io/astronomer/astro-runtime:10.9.0
+FROM quay.io/astronomer/astro-runtime:13.2.0
 
 # Switch to the root user for privileged operations.
 USER root
@@ -8,7 +8,7 @@ RUN python -m venv dbt_venv
 
 # Install dbt and your database adapter inside the virtual environment.
 # Replace dbt-postgres with your specific adapter (e.g., dbt-snowflake, dbt-bigquery).
-RUN /usr/local/airflow/dbt_venv/bin/pip install --no-cache-dir dbt-postgres==1.8.2
+RUN /usr/local/airflow/dbt_venv/bin/pip install --no-cache-dir dbt-postgres==1.9.0
 
 # Copy your local dbt project into the container.
 # The Astro CLI automatically mounts project files, but this ensures they are available
