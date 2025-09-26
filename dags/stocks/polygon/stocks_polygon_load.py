@@ -12,7 +12,7 @@ from dags.datasets import S3_RAW_DATA_DATASET, POSTGRES_DWH_RAW_DATASET
 
 @dag(
     dag_id="stocks_polygon_load",
-    start_date=pendulum.datetime(2025, 9, 2, tz="UTC"),
+    start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     schedule=[S3_RAW_DATA_DATASET], # This DAG runs WHEN the S3 raw data is ready
     catchup=False,
     tags=["load", "polygon"],
