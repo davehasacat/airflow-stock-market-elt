@@ -1,3 +1,10 @@
+{{
+    config(
+        materialized='table',
+        unique_key='stock_bar_id'
+    )
+}}
+
 with source as (
     select * from {{ source('public', 'source_polygon_stock_bars_daily') }}
 ),
