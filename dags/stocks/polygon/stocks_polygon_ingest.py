@@ -5,9 +5,11 @@ import requests
 import json
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.hooks.base import BaseHook
 from airflow.models import Variable
+
+# Import the shared Dataset objects
+from dags.datasets import S3_RAW_DATA_DATASET
 
 # Define the DAG
 @dag(
@@ -55,7 +57,7 @@ def stocks_polygon_ingest_dag():
         return batch_file_keys
 
     # Task to process a batch of tickers from a file in S3
-    @task(retries=3, retry_delay=pendulum.duration(minutes=5), pool="api_pool")
+    @task(retries=3, retry_delay=pendulum.duration(minutes=5), pool="api_pool", outlets=[S3_RAW_DATA_DATASET])
     def process_ticker_batch(batch_s3_key: str, **kwargs) -> list[str]:
         execution_date = kwargs["ds"]
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
@@ -83,26 +85,11 @@ def stocks_polygon_ingest_dag():
                 processed_s3_keys.append(s3_key)
 
         return processed_s3_keys
-    # Task to flatten the list of lists from the mapped task
-    @task
-    def flatten_s3_key_list(nested_list: list[list[str]]) -> list[str]:
-        """Takes the nested list from the mapped task and returns a single flat list."""
-        return [key for sublist in nested_list for key in sublist if key]
 
     # --- Define the DAG's task dependencies ---
     
     batch_keys = get_and_batch_tickers_to_s3()
-    processed_keys_nested = process_ticker_batch.expand(batch_s3_key=batch_keys)
+    process_ticker_batch.expand(batch_s3_key=batch_keys)
     
-    # Call the flattening task
-    s3_keys_flat = flatten_s3_key_list(processed_keys_nested)
-
-    # Trigger the downstream DAG, passing the clean, flat list of keys
-    trigger_downstream_dag = TriggerDagRunOperator(
-        task_id="trigger_load_dag",
-        trigger_dag_id="stocks_polygon_load",
-        conf={"s3_keys": s3_keys_flat},  # Pass the XComArg from the flatten task directly
-        wait_for_completion=False, # Optional: wait for the triggered DAG to finish
-    )
 
 stocks_polygon_ingest_dag()

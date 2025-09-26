@@ -3,7 +3,6 @@ import pendulum
 import json
 import os
 from airflow.decorators import dag, task
-from airflow.operators.trigger_dagrun import TriggerDagRunOperator
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
@@ -34,18 +33,23 @@ def stocks_polygon_load_dag():
     BATCH_SIZE = 250
 
     @task
-    def get_s3_keys_from_trigger(**kwargs) -> list[str]:
-        """Pulls the list of S3 keys from the dag_run.conf dictionary."""
-        dag_run = kwargs.get("dag_run")
-        if not dag_run or not dag_run.conf:
-            raise ValueError("DAG run or configuration is missing.")
-            
-        s3_keys = dag_run.conf.get("s3_keys")
-        if not s3_keys:
-            raise ValueError("No 's3_keys' found in DAG run configuration. Aborting.")
+    def list_s3_keys_for_date(**kwargs) -> list[str]:
+        """Lists the S3 keys for the given execution date."""
+        s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
+        execution_date = kwargs["ds"]
+        target_date = pendulum.parse(execution_date).subtract(days=1).to_date_string()
         
-        print(f"Received {len(s3_keys)} S3 keys to process.")
-        return s3_keys
+        # In a production scenario, you might want to make this more robust
+        # to handle cases where the ingest DAG runs at a different time
+        prefix = f"raw_data/"
+        
+        keys = s3_hook.list_keys(bucket_name=BUCKET_NAME, prefix=prefix)
+        
+        # Filter for the target date
+        target_keys = [key for key in keys if target_date in key]
+
+        print(f"Found {len(target_keys)} S3 keys for date: {target_date}")
+        return target_keys
 
     @task
     def batch_s3_keys(s3_keys: list[str]) -> list[list[str]]:
@@ -142,22 +146,7 @@ def stocks_polygon_load_dag():
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
     # --- Task Flow Definition ---
-    @task
-    def get_s3_keys_from_dataset_trigger(**kwargs) -> list[str]:
-        """Pulls the list of S3 keys from the triggering dataset event."""
-        # When scheduled by a dataset, the conf is populated from the trigger's `extra` param
-        dag_run = kwargs.get("dag_run")
-        if not dag_run or not dag_run.conf:
-            raise ValueError("DAG run or configuration is missing.")
-        
-        s3_keys = dag_run.conf.get("s3_keys")
-        if not s3_keys:
-            raise ValueError("No 's3_keys' found in DAG run configuration. Aborting.")
-        
-        print(f"Received {len(s3_keys)} S3 keys to process from dataset trigger.")
-        return s3_keys
-
-    s3_keys = get_s3_keys_from_dataset_trigger()
+    s3_keys = list_s3_keys_for_date()
     key_batches = batch_s3_keys(s3_keys)
     transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
     flat_records = flatten_results(transformed_batches)
