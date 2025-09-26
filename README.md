@@ -17,7 +17,7 @@ The ELT process is orchestrated by three modular and data-driven Airflow DAGs th
 
     It also runs data quality tests to ensure the integrity of the transformed data.
 
-### Proof of Success
+## Proof of Success
 
 * **Airflow Orchestration**: The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution and data-driven scheduling of all three DAGs.
 <img width="1240" height="452" alt="Capture" src="https://github.com/user-attachments/assets/412593ee-65e1-4437-8c8b-56772a970171" />
@@ -26,7 +26,6 @@ The ELT process is orchestrated by three modular and data-driven Airflow DAGs th
 _Note: the failed `load` runs are for non-trading days i.e. days that do not have stock data_
 
 <img width="1096" height="458" alt="Capture3" src="https://github.com/user-attachments/assets/4fbffa66-42dc-4b63-9797-96033fd1297b" />
-
 
 * **Data Transformation**: The data is successfully transformed through staging, intermediate, and marts layers and is available for querying in the data warehouse. The final `fct_polygon__stock_bars_performance` table provides a clean, analytics-ready dataset with calculated metrics, as shown by the following query result:
 
