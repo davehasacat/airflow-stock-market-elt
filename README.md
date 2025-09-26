@@ -1,6 +1,6 @@
 # Airflow Stock Market ELT Pipeline
 
-This project is a complete, containerized ELT (Extract, Load, Transform) environment designed for processing stock data from the [Polygon.io](https://polygon.io/) API. It uses a modern data stack to orchestrate a highly parallelized and scalable data pipeline, manage transformations with dbt, and store data in a Postgres data warehouse, providing a robust foundation for financial analysis and backtesting.
+This repository contains a complete ELT pipeline for ingesting stock market data from the Polygon API, storing it in a data warehouse, and visualizing it with an interactive Streamlit dashboard. The pipeline is orchestrated using Apache Airflow and is designed to run on a local development environment using the Astro CLI.
 
 ## Pipeline Architecture
 
@@ -17,8 +17,9 @@ The ELT process is orchestrated by three modular and data-driven Airflow DAGs th
 
     It also runs data quality tests to ensure the integrity of the transformed data.
 
-### Proof of Success
+## Proof of Success
 
+### Airflow Orchestration
 The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution and data-driven scheduling of all three DAGs.
 
 <img width="1240" height="452" alt="Capture" src="https://github.com/user-attachments/assets/412593ee-65e1-4437-8c8b-56772a970171" />
@@ -29,7 +30,7 @@ _Note: the failed `load` runs are for non-trading days i.e. days that do not hav
 
 <img width="1096" height="458" alt="Capture3" src="https://github.com/user-attachments/assets/4fbffa66-42dc-4b63-9797-96033fd1297b" />
 
-
+### Data Transformation
 The data is successfully transformed through staging, intermediate, and marts layers and is available for querying in the data warehouse. The final `fct_polygon__stock_bars_performance` table provides a clean, analytics-ready dataset with calculated metrics, as shown by the following query result:
 
 ```sql
@@ -51,22 +52,23 @@ LIMIT 5;
 
 <img width="814" height="183" alt="Capture4" src="https://github.com/user-attachments/assets/3defc071-5ac4-4e3f-a68d-dea266939505" />
 
+### Interactive Dashboard
+The tech stack has been expanded to include a Streamlit application. This provides an interactive, user-friendly dashboard for visualizing and analyzing the ingested stock data, offering a clear and tangible view of the pipeline's output.
+
+<img width="1802" height="969" alt="Capture" src="https://github.com/user-attachments/assets/ec34571f-00ef-4c4f-9971-cbc9a636c940" />
+
 ---
 
 ## Tech Stack
 
-* **Orchestration**: **Apache Airflow**
-  * Used to schedule, execute, and monitor the data pipelines (DAGs).
-* **Containerization**: **Docker**
-  * Used to create a consistent, isolated, and reproducible environment for all services.
-* **Development CLI**: **Astro CLI**
-  * Used to streamline local development and testing of the Airflow environment.
-* **Object Storage**: **Minio**
-  * Serves as an S3-compatible object storage solution for raw data files.
-* **Data Warehouse**: **Postgres**
-  * Acts as the central data warehouse where both raw and transformed data is stored.
-* **Transformation**: **dbt (Data Build Tool)**
-  * Used to transform raw data in the warehouse into clean, reliable, and analytics-ready datasets using SQL.
+* **Orchestration**: Apache Airflow
+* **Data Ingestion**: Python, Polygon API
+* **Data Lake**: MinIO S3
+* **Data Warehouse**: PostgreSQL
+* **Transformation**: dbt (data build tool)
+* **Dashboarding**: Streamlit
+* **Containerization**: Docker
+* **Local Development**: Astro CLI
 
 ---
 
@@ -107,7 +109,7 @@ This project serves as a strong foundation for a robust financial data platform.
 * [x] **Migrate to Polygon.io for Scalable Ingestion**: Transition from Alpha Vantage to a professional-grade API. This includes refactoring the controller DAG to dynamically fetch the entire list of available stock tickers, allowing the pipeline to automatically scale from a few tickers to thousands without code changes.
 * [x] **Implement an Incremental Loading Strategy**: Evolve the data loading pattern from "truncate and load" to an incremental approach. This will preserve historical data and significantly improve performance by only processing new or updated records on each run.
 * [x] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
-* [ ] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
+* [x] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
 
 ## Documentation
@@ -119,4 +121,5 @@ For more detailed information on the tools and technologies used in this project
 * **[Docker Documentation](https://docs.docker.com/)**
 * **[Minio Documentation](https://docs.min.io/)**
 * **[PostgreSQL Documentation](https://www.postgresql.org/docs/)**
+* **[Streamlit Documentation](https://docs.streamlit.io/)**
 * **[dbt Documentation](https://docs.getdbt.com/)**
