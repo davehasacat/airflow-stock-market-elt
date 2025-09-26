@@ -99,7 +99,7 @@ The tech stack has been expanded to include a Streamlit application. This provid
 2. **Create the Minio Bucket via the UI**:
     * Navigate to the Minio console at [http://localhost:9001](http://localhost:9001).
     * Log in with the credentials from your `.env` file (default is `minioadmin` / `minioadmin`).
-    * Click the **Create Bucket** button, enter the name `test`, and click **Create Bucket**.
+    * Click the **Create a Bucket** button, enter a bucket name (`test` is the default), and click **Create Bucket**.
 
 3. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline.
 
@@ -109,7 +109,6 @@ The tech stack has been expanded to include a Streamlit application. This provid
 
 This project serves as a strong foundation for a robust financial data platform. The next steps for expanding this project include:
 
-* [x] **Migrate to Polygon.io for Scalable Ingestion**: Transition from Alpha Vantage to a professional-grade API. This includes refactoring the controller DAG to dynamically fetch the entire list of available stock tickers, allowing the pipeline to automatically scale from a few tickers to thousands without code changes.
 * [x] **Implement an Incremental Loading Strategy**: Evolve the data loading pattern from "truncate and load" to an incremental approach. This will preserve historical data and significantly improve performance by only processing new or updated records on each run.
 * [x] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
 * [x] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
