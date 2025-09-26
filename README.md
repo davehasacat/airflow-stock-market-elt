@@ -1,22 +1,55 @@
-# Airflow Stocks ELT Project
+# Airflow Stock Market ELT Pipeline
 
 This project is a complete, containerized ELT (Extract, Load, Transform) environment designed for processing stock data from the [Polygon.io](https://polygon.io/) API. It uses a modern data stack to orchestrate a highly parallelized and scalable data pipeline, manage transformations with dbt, and store data in a Postgres data warehouse, providing a robust foundation for financial analysis and backtesting.
 
 ## Pipeline Architecture
 
-The ELT process is orchestrated by three modular and event-driven Airflow DAGs that form a seamless, automated workflow. The architecture is designed for high throughput and scalability, capable of ingesting and processing data for thousands of stock tickers efficiently.
+The ELT process is orchestrated by three modular and data-driven Airflow DAGs that form a seamless, automated workflow. The architecture is designed for high throughput and scalability, capable of ingesting and processing data for thousands of stock tickers efficiently.
 
-1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage. This dynamic, batch-based approach allows the DAG to scale to any number of tickers without hitting Airflow's internal limitations.
+1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage.
 
-2. **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG, this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
+2. **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG (via Airflow Datasets), this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
 
-3. **`stocks_polygon_dbt_transform`**: Once the raw data has been successfully loaded into the warehouse, this DAG is triggered to run the `dbt build` command. This executes all the dbt models, which transform the raw data into a clean, analytics-ready staging model (`int_polygon__stock_bars_daily`), and runs data quality tests to ensure the integrity of the transformed data.
+3. **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces a corresponding **Dataset** that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
+    * A clean, casted staging model (`stg_polygon__stock_bars_casted`).
+    * An enriched intermediate model with technical indicators (`int_polygon__stock_bars_enriched`).
+    * A final, analytics-ready facts table (`fct_polygon__stock_bars_performance`).
+
+    It also runs data quality tests to ensure the integrity of the transformed data.
 
 ### Proof of Success
 
-The screenshot below shows a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution of all three DAGs.
+The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution and data-driven scheduling of all three DAGs.
 
-The data is successfully transformed and available for querying in the data warehouse, as shown by the following query result from the `int_polygon__stock_bars_daily` table:
+<img width="1240" height="452" alt="Capture" src="https://github.com/user-attachments/assets/412593ee-65e1-4437-8c8b-56772a970171" />
+
+<img width="1034" height="515" alt="Capture2" src="https://github.com/user-attachments/assets/7e77a779-6f21-4fc7-8dc5-69f2e934d213" />
+
+_Note: the failed `load` runs are for non-trading days i.e. days that do not have stock data_
+
+<img width="1096" height="458" alt="Capture3" src="https://github.com/user-attachments/assets/4fbffa66-42dc-4b63-9797-96033fd1297b" />
+
+
+The data is successfully transformed through staging, intermediate, and marts layers and is available for querying in the data warehouse. The final `fct_polygon__stock_bars_performance` table provides a clean, analytics-ready dataset with calculated metrics, as shown by the following query result:
+
+```sql
+-- Querying the final marts table for enriched performance data
+SELECT
+    ticker,
+    trade_date,
+    close_price,
+    moving_avg_50d,
+    daily_price_range
+FROM
+    public.fct_polygon__stock_bars_performance
+WHERE
+    ticker = 'GOOGL'
+ORDER BY
+    trade_date DESC
+LIMIT 5;
+```
+
+<img width="814" height="183" alt="Capture4" src="https://github.com/user-attachments/assets/3defc071-5ac4-4e3f-a68d-dea266939505" />
 
 ---
 
@@ -47,16 +80,23 @@ The data is successfully transformed and available for querying in the data ware
 
 ### Configuration
 
-1. **Environment Variables**: Create a file named `.env` in the project root. Copy the contents of `.env.example` (if you've created one) into it and fill in your `POLYGON_API_KEY`. The rest of the variables are pre-configured for the local environment.
+1. **Environment Variables**: Create a file named `.env` in the project root. Copy the contents of `.env.example` into it and fill in your `POLYGON_API_KEY`. The rest of the variables are pre-configured for the local environment.
 2. **dbt Profile**: The `dbt/profiles.yml` file is configured to read credentials from the `.env` file. No changes are needed.
 
 ### Running the Project
 
 1. **Start the environment** with a single command from your project's root directory:
 
-2. **Create the Minio Bucket**:
+    ```bash
+    astro dev start
+    ```
 
-3. **Run the Full Pipeline**:
+2. **Create the Minio Bucket via the UI**:
+    * Navigate to the Minio console at [http://localhost:9001](http://localhost:9001).
+    * Log in with the credentials from your `.env` file (default is `minioadmin` / `minioadmin`).
+    * Click the **Create Bucket** button, enter the name `test`, and click **Create Bucket**.
+
+3. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline.
 
 ---
 
@@ -66,7 +106,7 @@ This project serves as a strong foundation for a robust financial data platform.
 
 * [x] **Migrate to Polygon.io for Scalable Ingestion**: Transition from Alpha Vantage to a professional-grade API. This includes refactoring the controller DAG to dynamically fetch the entire list of available stock tickers, allowing the pipeline to automatically scale from a few tickers to thousands without code changes.
 * [x] **Implement an Incremental Loading Strategy**: Evolve the data loading pattern from "truncate and load" to an incremental approach. This will preserve historical data and significantly improve performance by only processing new or updated records on each run.
-* [ ] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
+* [x] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
 * [ ] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
 

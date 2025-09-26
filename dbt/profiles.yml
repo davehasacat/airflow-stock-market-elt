@@ -1,5 +1,3 @@
-# dbt/profiles.yml
-
 # This file defines connection profiles for dbt.
 # For more information on configuring this file, see the dbt documentation:
 # https://docs.getdbt.com/docs/core/connect-data-platform/profiles.yml
