@@ -14,14 +14,42 @@ with source as (
       {% endif %}
 ),
 
-enriched as (
+add_calculated_metrics as (
 select
-  t1.*,
-  round(avg(close_price) over (partition by ticker order by trade_date rows between 19 preceding and current row), 4) as moving_avg_20d,
-  round(avg(close_price) over (partition by ticker order by trade_date rows between 49 preceding and current row), 4) as moving_avg_50d,
+  loaded_at,
+  stock_bar_id,
+  ticker,
+  trade_date,
+  open_price,
+  high_price,
+  low_price,
+  close_price,
+  volume_weighted_average_price,
+  avg(close_price) over (partition by ticker order by trade_date rows between 19 preceding and current row) as moving_avg_20d,
+  avg(close_price) over (partition by ticker order by trade_date rows between 49 preceding and current row) as moving_avg_50d,
   (close_price - lag(close_price, 1) over (partition by ticker order by trade_date)) as price_change_1d,
-  (high_price - low_price) as daily_price_range
-from source t1
+  (high_price - low_price) as daily_price_range,
+  volume,
+  transactions
+from source
+),
+
+enriched as (
+  loaded_at,
+  stock_bar_id,
+  ticker,
+  trade_date,
+  open_price,
+  high_price,
+  low_price,
+  close_price,
+  volume_weighted_average_price,
+  moving_avg_20d,
+  moving_avg_50d,
+  price_change_1d,
+  daily_price_range,
+  volume,
+  transactions
 )
 
 select * from enriched
