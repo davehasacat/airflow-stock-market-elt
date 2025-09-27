@@ -44,8 +44,14 @@ enriched as (
   low_price,
   close_price,
   volume_weighted_average_price,
-  moving_avg_20d,
-  moving_avg_50d,
+  case
+    when moving_avg_20d >= 1.0000 then round(moving_avg_20d, 2)
+    else round(moving_avg_20d, 4)
+  end as moving_avg_20d,
+  case
+    when moving_avg_50d >= 1.0000 then round(moving_avg_50d, 2)
+    else round(moving_avg_50d, 4)
+  end as moving_avg_50d,
   price_change_1d,
   daily_price_range,
   volume,
