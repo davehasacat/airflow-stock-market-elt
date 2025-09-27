@@ -45,7 +45,7 @@ WHERE
 LIMIT 20;
 ```
 
-<img width="814" height="183" alt="Capture4" src="https://github.com/user-attachments/assets/3defc071-5ac4-4e3f-a68d-dea266939505" />
+<img width="1799" height="594" alt="Capture" src="https://github.com/user-attachments/assets/20bf55e4-046c-47b6-8980-eb8ecab86665" />
 
 ### Interactive Dashboard
 
