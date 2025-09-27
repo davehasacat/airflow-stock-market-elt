@@ -35,6 +35,7 @@ from source
 ),
 
 enriched as (
+select
   loaded_at,
   stock_bar_id,
   ticker,
@@ -56,6 +57,7 @@ enriched as (
   daily_price_range,
   volume,
   transactions
+from add_calculated_metrics
 )
 
 select * from enriched
