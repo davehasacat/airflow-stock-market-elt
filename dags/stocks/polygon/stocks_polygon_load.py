@@ -5,62 +5,64 @@ import os
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.exceptions import AirflowSkipException
 
 # Import the shared Dataset objects
-from dags.datasets import S3_RAW_DATA_DATASET, POSTGRES_DWH_RAW_DATASET
+from dags.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
 
 @dag(
     dag_id="stocks_polygon_load",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
-    schedule=[S3_RAW_DATA_DATASET], # This DAG runs WHEN the S3 raw data is ready
+    schedule=[S3_MANIFEST_DATASET],  # This DAG now runs WHEN the manifest is ready
     catchup=False,
     tags=["load", "polygon"],
     doc_md="""
-    ### Stocks Polygon Load DAG (Best Practice Schema)
+    ### Stocks Polygon Load DAG
 
-    This DAG is triggered by `stocks_polygon_ingest`. It creates the target table
-    with a robust, best-practice schema if it doesn't exist, then processes
-    batches of S3 keys in parallel to perform an incremental load (UPSERT)
-    into the Postgres data warehouse.
+    This DAG is triggered by a manifest file from `stocks_polygon_ingest`. 
+    It reads the manifest to get a list of S3 keys, then processes those keys in 
+    parallel to perform an incremental load into the Postgres data warehouse.
     """,
 )
 def stocks_polygon_load_dag():
-    # --- DAG Configuration ---
     S3_CONN_ID = os.getenv("S3_CONN_ID", "minio_s3")
     POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
     BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
     POSTGRES_TABLE = "source_polygon_stock_bars_daily"
-    BATCH_SIZE = 250
+    BATCH_SIZE = 1000
 
     @task
-    def list_s3_keys_for_date(**kwargs) -> list[str]:
-        """Lists the S3 keys for the given execution date."""
+    def get_s3_keys_from_manifest(**kwargs) -> list[str]:
+        """
+        Reads the manifest file from S3 to get the list of raw data keys to process.
+        The manifest file name is derived from the DAG's execution timestamp.
+        """
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-        execution_date = kwargs["ds"]
-        target_date = pendulum.parse(execution_date).subtract(days=1).to_date_string()
-        
-        # In a production scenario, you might want to make this more robust
-        # to handle cases where the ingest DAG runs at a different time
-        prefix = f"raw_data/"
-        
-        keys = s3_hook.list_keys(bucket_name=BUCKET_NAME, prefix=prefix)
-        
-        # Filter for the target date
-        target_keys = [key for key in keys if target_date in key]
+        execution_ts = kwargs['ts_nodash']
+        manifest_key = f"manifests/manifest_{execution_ts}.txt"
 
-        print(f"Found {len(target_keys)} S3 keys for date: {target_date}")
-        return target_keys
+        if not s3_hook.check_for_key(manifest_key, bucket_name=BUCKET_NAME):
+            raise FileNotFoundError(f"Manifest file not found in S3: {manifest_key}")
+
+        manifest_content = s3_hook.read_key(key=manifest_key, bucket_name=BUCKET_NAME)
+        s3_keys = manifest_content.strip().splitlines()
+
+        if not s3_keys:
+            raise AirflowSkipException("Manifest file is empty. No keys to process.")
+        
+        print(f"Found {len(s3_keys)} S3 keys to process from manifest: {manifest_key}")
+        return s3_keys
 
     @task
     def batch_s3_keys(s3_keys: list[str]) -> list[list[str]]:
-        """Groups the incoming list of S3 keys into smaller batches."""
+        # This task remains the same
         batches = [s3_keys[i:i + BATCH_SIZE] for i in range(0, len(s3_keys), BATCH_SIZE)]
         print(f"Created {len(batches)} batches of approximately {BATCH_SIZE} keys each.")
         return batches
 
     @task
     def transform_batch(batch_of_keys: list[str]) -> list[dict]:
-        """Reads and transforms a batch of JSON files from S3."""
+        # This task remains the same
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         clean_records = []
         
@@ -92,22 +94,18 @@ def stocks_polygon_load_dag():
 
     @task
     def flatten_results(nested_list: list[list[dict]]) -> list[dict]:
-        """Takes the nested list of results and returns a single flat list."""
+        # This task remains the same
         return [record for batch in nested_list for record in batch if record]
 
-    @task(outlets=[POSTGRES_DWH_RAW_DATASET])  # task produces an update to the postgres dataset
+    @task(outlets=[POSTGRES_DWH_RAW_DATASET])
     def load_to_postgres_incremental(clean_records: list[dict]):
-        """
-        Ensures the target table exists with the correct schema, then performs
-        an incremental load (UPSERT).
-        """
+        # This task remains the same
         if not clean_records:
             print("No new records to load. Skipping warehouse operation.")
             return
 
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
 
-        # --- Best-Practice Schema Definition ---
         create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
             ticker TEXT NOT NULL,
@@ -130,7 +128,6 @@ def stocks_polygon_load_dag():
         rows_to_insert = [tuple(rec.values()) for rec in clean_records]
         target_fields = list(clean_records[0].keys())
         
-        # update the `inserted_at` timestamp on conflict
         update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in target_fields if col not in ["ticker", "trade_date"]]
         update_cols.append('"inserted_at" = NOW()')
         
@@ -146,7 +143,7 @@ def stocks_polygon_load_dag():
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
     # --- Task Flow Definition ---
-    s3_keys = list_s3_keys_for_date()
+    s3_keys = get_s3_keys_from_manifest()
     key_batches = batch_s3_keys(s3_keys)
     transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
     flat_records = flatten_results(transformed_batches)

@@ -6,12 +6,10 @@ import json
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.hooks.base import BaseHook
-from airflow.models import Variable
 
-# Import the shared Dataset objects
-from dags.datasets import S3_RAW_DATA_DATASET
+# Import the new shared Dataset object
+from dags.datasets import S3_MANIFEST_DATASET
 
-# Define the DAG
 @dag(
     dag_id="stocks_polygon_ingest",
     start_date=pendulum.datetime(2025, 9, 2, tz="UTC"),
@@ -20,13 +18,13 @@ from dags.datasets import S3_RAW_DATA_DATASET
     tags=["ingestion", "polygon"],
 )
 def stocks_polygon_ingest_dag():
-    # Define S3 and Bucket connections
     S3_CONN_ID = os.getenv("S3_CONN_ID", "minio_s3")
     BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
+    BATCH_SIZE = 1000
 
-    # Task to get all tickers, split them into batches, and save each batch to S3
     @task(pool="api_pool")
     def get_and_batch_tickers_to_s3() -> list[str]:
+        # This task remains the same
         conn = BaseHook.get_connection('polygon_api')
         api_key = conn.password
         if not api_key:
@@ -45,7 +43,7 @@ def stocks_polygon_ingest_dag():
                 next_url += f"&apiKey={api_key}"
 
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-        batch_size = 250
+        batch_size = BATCH_SIZE
         batch_file_keys = []
         for i in range(0, len(all_tickers), batch_size):
             batch = all_tickers[i:i + batch_size]
@@ -56,9 +54,9 @@ def stocks_polygon_ingest_dag():
             
         return batch_file_keys
 
-    # Task to process a batch of tickers from a file in S3
-    @task(retries=3, retry_delay=pendulum.duration(minutes=5), pool="api_pool", outlets=[S3_RAW_DATA_DATASET])
+    @task(retries=3, retry_delay=pendulum.duration(minutes=5), pool="api_pool")
     def process_ticker_batch(batch_s3_key: str, **kwargs) -> list[str]:
+        # This task no longer has an outlet
         execution_date = kwargs["ds"]
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         
@@ -86,10 +84,35 @@ def stocks_polygon_ingest_dag():
 
         return processed_s3_keys
 
-    # --- Define the DAG's task dependencies ---
-    
+    @task
+    def flatten_s3_key_list(nested_list: list[list[str]]) -> list[str]:
+        return [key for sublist in nested_list for key in sublist if key]
+
+    @task(outlets=[S3_MANIFEST_DATASET])
+    def write_manifest_to_s3(s3_keys: list[str], **kwargs) -> str:
+        """Writes the list of processed S3 keys to a timestamped manifest file."""
+        if not s3_keys:
+            print("No S3 keys were processed. Skipping manifest creation.")
+            return ""
+
+        # Use the execution timestamp to create a unique manifest file name
+        execution_ts = kwargs['ts_nodash']
+        manifest_content = "\n".join(s3_keys)
+        s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
+        manifest_key = f"manifests/manifest_{execution_ts}.txt"
+        s3_hook.load_string(
+            string_data=manifest_content,
+            key=manifest_key,
+            bucket_name=BUCKET_NAME,
+            replace=True
+        )
+        print(f"Manifest file created: {manifest_key}")
+        return manifest_key
+
+    # --- Task Flow Definition ---
     batch_keys = get_and_batch_tickers_to_s3()
-    process_ticker_batch.expand(batch_s3_key=batch_keys)
-    
+    processed_keys_nested = process_ticker_batch.expand(batch_s3_key=batch_keys)
+    s3_keys_flat = flatten_s3_key_list(processed_keys_nested)
+    write_manifest_to_s3(s3_keys_flat)
 
 stocks_polygon_ingest_dag()
