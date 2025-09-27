@@ -6,11 +6,13 @@ This repository contains a complete ELT pipeline for ingesting stock market data
 
 The ELT process is orchestrated by three modular and data-driven Airflow DAGs that form a seamless, automated workflow. The architecture is designed for high throughput and scalability, capable of ingesting and processing data for thousands of stock tickers efficiently.
 
-1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage.
+The DAGs are fully decoupled and communicate through **Airflow Datasets**, which are URIs that represent a piece of data. This creates a more resilient, event-driven workflow.
 
-2. **`stocks_polygon_load`**: Triggered by the completion of the ingest DAG (via Airflow Datasets), this DAG takes the list of newly created JSON files in Minio and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion.
+1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage. Upon completion, it writes a list of all created file keys to a manifest file and **produces to an S3 Dataset** (`s3://test/manifests`).
 
-3. **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces a corresponding **Dataset** that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
+2. **`stocks_polygon_load`**: This DAG is scheduled to run only when the S3 manifest Dataset is updated. It reads the list of newly created JSON files from the manifest and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion. When the load is successful, it produces to a Postgres Dataset (`postgres_dwh://public/source_polygon_stock_bars_daily`).
+
+3. **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces the corresponding Dataset that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
     * A clean, casted staging model (`stg_polygon__stock_bars_casted`).
     * An enriched intermediate model with technical indicators (`int_polygon__stock_bars_enriched`).
     * A final, analytics-ready facts table (`fct_polygon__stock_bars_performance`).
@@ -35,21 +37,12 @@ _Note: the failed `load` runs are for non-trading days i.e. days that do not hav
 
 The data is successfully transformed through staging, intermediate, and marts layers and is available for querying in the data warehouse. The final `fct_polygon__stock_bars_performance` table provides a clean, analytics-ready dataset with calculated metrics, as shown by the following query result:
 
-```sql
--- Querying the final marts table for enriched performance data
-SELECT
-    ticker,
-    trade_date,
-    close_price,
-    moving_avg_50d,
-    daily_price_range
-FROM
+``` sql
+SELECT * FROM
     public.fct_polygon__stock_bars_performance
 WHERE
     ticker = 'GOOGL'
-ORDER BY
-    trade_date DESC
-LIMIT 5;
+LIMIT 20;
 ```
 
 <img width="814" height="183" alt="Capture4" src="https://github.com/user-attachments/assets/3defc071-5ac4-4e3f-a68d-dea266939505" />
