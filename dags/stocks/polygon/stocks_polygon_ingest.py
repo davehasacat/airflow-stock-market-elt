@@ -6,13 +6,14 @@ import json
 from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.hooks.base import BaseHook
+from airflow.exceptions import AirflowSkipException
 
-# Import the new shared Dataset object
+# Import the shared Dataset object
 from dags.datasets import S3_MANIFEST_DATASET
 
 @dag(
     dag_id="stocks_polygon_ingest",
-    start_date=pendulum.datetime(2025, 9, 2, tz="UTC"),
+    start_date=pendulum.datetime(2025, 7, 1, tz="UTC"),
     schedule="0 0 * * 1-5",
     catchup=True,
     tags=["ingestion", "polygon"],
@@ -24,7 +25,6 @@ def stocks_polygon_ingest_dag():
 
     @task(pool="api_pool")
     def get_and_batch_tickers_to_s3() -> list[str]:
-        # This task remains the same
         conn = BaseHook.get_connection('polygon_api')
         api_key = conn.password
         if not api_key:
@@ -56,7 +56,6 @@ def stocks_polygon_ingest_dag():
 
     @task(retries=3, retry_delay=pendulum.duration(minutes=5), pool="api_pool")
     def process_ticker_batch(batch_s3_key: str, **kwargs) -> list[str]:
-        # This task no longer has an outlet
         execution_date = kwargs["ds"]
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         
@@ -89,25 +88,26 @@ def stocks_polygon_ingest_dag():
         return [key for sublist in nested_list for key in sublist if key]
 
     @task(outlets=[S3_MANIFEST_DATASET])
-    def write_manifest_to_s3(s3_keys: list[str], **kwargs) -> str:
-        """Writes the list of processed S3 keys to a timestamped manifest file."""
+    def write_manifest_to_s3(s3_keys: list[str], **kwargs):
+        """Overwrites the 'latest' manifest file with the list of S3 keys from the current run."""
         if not s3_keys:
-            print("No S3 keys were processed. Skipping manifest creation.")
-            return ""
+            print("No S3 keys were processed. Skipping manifest creation and downstream DAG.")
+            raise AirflowSkipException("No S3 keys to create a manifest for.")
 
-        # Use the execution timestamp to create a unique manifest file name
-        execution_ts = kwargs['ts_nodash']
         manifest_content = "\n".join(s3_keys)
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-        manifest_key = f"manifests/manifest_{execution_ts}.txt"
+        
+        # Use a fixed, predictable filename.
+        manifest_key = "manifests/manifest_latest.txt"
+        
         s3_hook.load_string(
             string_data=manifest_content,
             key=manifest_key,
             bucket_name=BUCKET_NAME,
             replace=True
         )
-        print(f"Manifest file created: {manifest_key}")
-        return manifest_key
+        print(f"Manifest file updated: {manifest_key}")
+
 
     # --- Task Flow Definition ---
     batch_keys = get_and_batch_tickers_to_s3()

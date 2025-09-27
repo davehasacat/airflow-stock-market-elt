@@ -13,16 +13,9 @@ from dags.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
 @dag(
     dag_id="stocks_polygon_load",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
-    schedule=[S3_MANIFEST_DATASET],  # This DAG now runs WHEN the manifest is ready
+    schedule=[S3_MANIFEST_DATASET],
     catchup=False,
     tags=["load", "polygon"],
-    doc_md="""
-    ### Stocks Polygon Load DAG
-
-    This DAG is triggered by a manifest file from `stocks_polygon_ingest`. 
-    It reads the manifest to get a list of S3 keys, then processes those keys in 
-    parallel to perform an incremental load into the Postgres data warehouse.
-    """,
 )
 def stocks_polygon_load_dag():
     S3_CONN_ID = os.getenv("S3_CONN_ID", "minio_s3")
@@ -32,20 +25,18 @@ def stocks_polygon_load_dag():
     BATCH_SIZE = 1000
 
     @task
-    def get_s3_keys_from_manifest(**kwargs) -> list[str]:
-        """
-        Reads the manifest file from S3 to get the list of raw data keys to process.
-        The manifest file name is derived from the DAG's execution timestamp.
-        """
+    def get_s3_keys_from_manifest() -> list[str]:
+        """Reads the list of S3 keys from the 'latest' manifest file."""
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-        execution_ts = kwargs['ts_nodash']
-        manifest_key = f"manifests/manifest_{execution_ts}.txt"
+        
+        # Read from the fixed, predictable filename.
+        manifest_key = "manifests/manifest_latest.txt"
 
         if not s3_hook.check_for_key(manifest_key, bucket_name=BUCKET_NAME):
             raise FileNotFoundError(f"Manifest file not found in S3: {manifest_key}")
 
         manifest_content = s3_hook.read_key(key=manifest_key, bucket_name=BUCKET_NAME)
-        s3_keys = manifest_content.strip().splitlines()
+        s3_keys = [key for key in manifest_content.strip().splitlines() if key]
 
         if not s3_keys:
             raise AirflowSkipException("Manifest file is empty. No keys to process.")
@@ -55,14 +46,12 @@ def stocks_polygon_load_dag():
 
     @task
     def batch_s3_keys(s3_keys: list[str]) -> list[list[str]]:
-        # This task remains the same
         batches = [s3_keys[i:i + BATCH_SIZE] for i in range(0, len(s3_keys), BATCH_SIZE)]
         print(f"Created {len(batches)} batches of approximately {BATCH_SIZE} keys each.")
         return batches
 
     @task
     def transform_batch(batch_of_keys: list[str]) -> list[dict]:
-        # This task remains the same
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         clean_records = []
         
@@ -94,12 +83,10 @@ def stocks_polygon_load_dag():
 
     @task
     def flatten_results(nested_list: list[list[dict]]) -> list[dict]:
-        # This task remains the same
         return [record for batch in nested_list for record in batch if record]
 
     @task(outlets=[POSTGRES_DWH_RAW_DATASET])
     def load_to_postgres_incremental(clean_records: list[dict]):
-        # This task remains the same
         if not clean_records:
             print("No new records to load. Skipping warehouse operation.")
             return
