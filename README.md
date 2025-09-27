@@ -85,13 +85,13 @@ The tech stack has been expanded to include a Streamlit application. This provid
 
 1. **Build the Streamlit Image**: Before starting the Astro cluster, you need to build the custom Docker image for the Streamlit dashboard. Run the following command from your project's root directory:
 
-    ```bash
+    ``` bash
     docker build -t streamlit-app ./streamlit
     ```
 
 2. **Start the environment** with a single command from your project's root directory:
 
-    ```bash
+    ``` bash
     astro dev start
     ```
 
