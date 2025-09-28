@@ -18,13 +18,13 @@ def get_db_connection():
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="Stock Market ELT Dashboard",
+    page_title="Stock Market Backtesting",
     page_icon="📈",
     layout="wide",
 )
 
 # --- App Title ---
-st.title("Stock Market ELT Dashboard")
+st.title("Momentum Trading Backtest - S&P500")
 
 # --- Data Loading ---
 @st.cache_data
