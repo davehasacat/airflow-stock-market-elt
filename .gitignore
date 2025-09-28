@@ -9,3 +9,5 @@ webserver_config.py
 airflow.cfg
 airflow.db
 .user.yml
+dbt/logs
+dbt/target
