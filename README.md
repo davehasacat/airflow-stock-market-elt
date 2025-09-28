@@ -25,13 +25,7 @@ The DAGs are fully decoupled and communicate through **Airflow Datasets**, which
 
 The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution and data-driven scheduling of all three DAGs.
 
-<img width="1240" height="452" alt="Capture" src="https://github.com/user-attachments/assets/412593ee-65e1-4437-8c8b-56772a970171" />
-
-<img width="1034" height="515" alt="Capture2" src="https://github.com/user-attachments/assets/7e77a779-6f21-4fc7-8dc5-69f2e934d213" />
-
-_Note: the failed `load` runs are for non-trading days i.e. days that do not have stock data_
-
-<img width="1096" height="458" alt="Capture3" src="https://github.com/user-attachments/assets/4fbffa66-42dc-4b63-9797-96033fd1297b" />
+<img width="1822" height="527" alt="Capture2" src="https://github.com/user-attachments/assets/415b89d8-5204-4dfb-98b9-7459e5c46c73" />
 
 ### Data Transformation
 
@@ -51,7 +45,7 @@ LIMIT 20;
 
 The tech stack has been expanded to include a Streamlit application. This provides an interactive, user-friendly dashboard for visualizing and analyzing the ingested stock data, offering a clear and tangible view of the pipeline's output.
 
-<img width="1802" height="969" alt="Capture" src="https://github.com/user-attachments/assets/ec34571f-00ef-4c4f-9971-cbc9a636c940" />
+<img width="1713" height="836" alt="Capture4" src="https://github.com/user-attachments/assets/91b3b69f-633a-41f8-9da6-9d2c2c91b7e8" />
 
 ---
 
