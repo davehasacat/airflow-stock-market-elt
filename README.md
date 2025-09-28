@@ -52,6 +52,7 @@ The tech stack has been expanded to include a Streamlit application. This provid
 ## Using the Interactive Dashboard
 
 The Streamlit dashboard allows you to interactively backtest a momentum trading strategy. Here's how to use it:
+
   1. **Select a Ticker**: Use the dropdown menu in the sidebar to choose a stock you want to analyze.
   2. **Configure the Strategy**: In the sidebar, adjust the parameters for the backtest:
        * **Moving Averages**: Set the short-term and long-term windows.
@@ -60,7 +61,7 @@ The Streamlit dashboard allows you to interactively backtest a momentum trading 
   4. **Analyze Results**: The dashboard will display the backtest results, including:
        * A chart showing your portfolio's value over time.
        * Performance metrics like Total Return and the Sharpe Ratio.
-         
+
 This allows you to experiment with different parameters to see how they affect the strategy's historical performance.
 
 <img width="1791" height="905" alt="Capture2" src="https://github.com/user-attachments/assets/155cae7d-d18a-4b0c-a951-2ef32eaf0f87" />
@@ -126,8 +127,8 @@ This project serves as a strong foundation for a robust financial data platform.
 * [x] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
 * [x] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
 * [ ] **Build Out the Streamlit Dashboard**: Expand the Streamlit application to include more advanced features, such as:
-    - Backtesting Scenarios: Allow users to define and run backtesting scenarios for different trading strategies.
-    - Customizable Visualizations: Add more charting options and allow users to customize the displayed metrics and timeframes.
+  - Backtesting Scenarios: Allow users to define and run backtesting scenarios for different trading strategies.
+  - Customizable Visualizations: Add more charting options and allow users to customize the displayed metrics and timeframes.
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
 
 ## Documentation
