@@ -36,10 +36,10 @@ SELECT * FROM
     public.fct_polygon__stock_bars_performance
 WHERE
     ticker = 'GOOGL'
-LIMIT 20;
+LIMIT 5;
 ```
 
-<img width="1799" height="594" alt="Capture" src="https://github.com/user-attachments/assets/20bf55e4-046c-47b6-8980-eb8ecab86665" />
+<img width="1798" height="202" alt="Capture5" src="https://github.com/user-attachments/assets/0b192cc7-71a2-4ac6-9f62-4ad775494a90" />
 
 ### Interactive Dashboard
 
