@@ -45,7 +45,7 @@ LIMIT 5;
 
 The tech stack has been expanded to include a Streamlit application. This provides an interactive, user-friendly dashboard for visualizing and analyzing the ingested stock data, offering a clear and tangible view of the pipeline's output.
 
-<img width="1713" height="836" alt="Capture4" src="https://github.com/user-attachments/assets/91b3b69f-633a-41f8-9da6-9d2c2c91b7e8" />
+<img width="1745" height="935" alt="Capture4" src="https://github.com/user-attachments/assets/e047f0c8-6e69-4d5c-8b29-c870b29ead9a" />
 
 ---
 
@@ -55,7 +55,7 @@ The tech stack has been expanded to include a Streamlit application. This provid
 * **Data Ingestion**: Python, Polygon API
 * **Data Lake**: MinIO S3
 * **Data Warehouse**: PostgreSQL
-* **Transformation**: dbt (data build tool)
+* **Transformation**: dbt Core
 * **Dashboarding**: Streamlit
 * **Containerization**: Docker
 * **Local Development**: Astro CLI
