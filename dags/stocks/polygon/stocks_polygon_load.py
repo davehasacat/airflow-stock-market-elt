@@ -129,11 +129,40 @@ def stocks_polygon_load_dag():
         )
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
+    @task
+    def move_s3_files_to_processed(s3_keys: list[str]):
+        """Moves the processed S3 files to a 'processed' directory."""
+        if not s3_keys:
+            print("No S3 keys to move.")
+            return
+
+        s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
+        for s3_key in s3_keys:
+            # Destination key adds the 'processed/' prefix
+            dest_key = f"processed/{s3_key}"
+            
+            # Copy the object to the new location
+            s3_hook.copy_object(
+                source_bucket_key=s3_key,
+                dest_bucket_key=dest_key,
+                source_bucket_name=BUCKET_NAME,
+                dest_bucket_name=BUCKET_NAME,
+            )
+            
+            # Delete the original object
+            s3_hook.delete_objects(bucket=BUCKET_NAME, keys=s3_key)
+
+        print(f"Successfully moved {len(s3_keys)} files to 'processed/' directory.")
+
     # --- Task Flow Definition ---
     s3_keys = get_s3_keys_from_manifest()
     key_batches = batch_s3_keys(s3_keys)
     transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
     flat_records = flatten_results(transformed_batches)
-    load_to_postgres_incremental(flat_records)
+    load_op = load_to_postgres_incremental(flat_records)
+    
+    # The new task depends on the successful completion of the load operation
+    move_op = move_s3_files_to_processed(s3_keys)
+    load_op >> move_op
 
 stocks_polygon_load_dag()
