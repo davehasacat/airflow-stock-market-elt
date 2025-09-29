@@ -3,7 +3,7 @@ import pandas as pd
 import psycopg2
 import os
 import numpy as np
-import plotly.graph_objects as go # Import Plotly
+import plotly.graph_objects as go
 
 # --- Database Connection ---
 def get_db_connection():
