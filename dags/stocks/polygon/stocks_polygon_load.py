@@ -6,6 +6,7 @@ from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowSkipException
+import psycopg2.extras
 
 # Import the shared Dataset objects
 from dags.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
@@ -92,7 +93,8 @@ def stocks_polygon_load_dag():
             return
 
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-
+        
+        # Create table if it doesn't exist
         create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
             ticker TEXT NOT NULL,
@@ -112,21 +114,39 @@ def stocks_polygon_load_dag():
         
         print(f"Preparing to incrementally load {len(clean_records)} records into {POSTGRES_TABLE}.")
         
-        rows_to_insert = [tuple(rec.values()) for rec in clean_records]
-        target_fields = list(clean_records[0].keys())
-        
-        update_cols = [col for col in target_fields if col not in ["ticker", "trade_date"]]
-        
-        pg_hook.insert_rows(
-            table=POSTGRES_TABLE,
-            rows=rows_to_insert,
-            target_fields=target_fields,
-            commit_every=1000,
-            on_conflict="do_update",
-            conflict_target=["ticker", "trade_date"],
-            update_columns=update_cols
-        )
+        with pg_hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                for record in clean_records:
+                    upsert_sql = f"""
+                    INSERT INTO {POSTGRES_TABLE} (ticker, trade_date, volume, vwap, "open", "close", high, low, transactions)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (ticker, trade_date) DO UPDATE SET
+                        volume = EXCLUDED.volume,
+                        vwap = EXCLUDED.vwap,
+                        "open" = EXCLUDED."open",
+                        "close" = EXCLUDED."close",
+                        high = EXCLUDED.high,
+                        low = EXCLUDED.low,
+                        transactions = EXCLUDED.transactions,
+                        inserted_at = NOW();
+                    """
+                    
+                    values = (
+                        record["ticker"],
+                        record["trade_date"],
+                        record["volume"],
+                        record["vwap"],
+                        record["open"],
+                        record["close"],
+                        record["high"],
+                        record["low"],
+                        record["transactions"],
+                    )
+                    
+                    cursor.execute(upsert_sql, values)
+
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
+
 
     @task
     def move_s3_files_to_processed(s3_keys: list[str]):
