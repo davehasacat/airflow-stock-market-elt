@@ -11,3 +11,5 @@ seeds:
           - not_null
       - name: company_name
         description: "The name of the company."
+      - name: sector
+        description: "The sector of the company."
