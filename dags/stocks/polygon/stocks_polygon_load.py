@@ -6,6 +6,7 @@ from airflow.decorators import dag, task
 from airflow.providers.amazon.aws.hooks.s3 import S3Hook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowSkipException
+import psycopg2.extras
 
 # Import the shared Dataset objects
 from dags.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
@@ -92,7 +93,8 @@ def stocks_polygon_load_dag():
             return
 
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-
+        
+        # Create table if it doesn't exist
         create_table_sql = f"""
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
             ticker TEXT NOT NULL,
@@ -112,28 +114,81 @@ def stocks_polygon_load_dag():
         
         print(f"Preparing to incrementally load {len(clean_records)} records into {POSTGRES_TABLE}.")
         
-        rows_to_insert = [tuple(rec.values()) for rec in clean_records]
-        target_fields = list(clean_records[0].keys())
-        
-        update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in target_fields if col not in ["ticker", "trade_date"]]
-        update_cols.append('"inserted_at" = NOW()')
-        
-        pg_hook.insert_rows(
-            table=POSTGRES_TABLE,
-            rows=rows_to_insert,
-            target_fields=target_fields,
-            commit_every=1000,
-            on_conflict="do_update",
-            conflict_target=["ticker", "trade_date"],
-            index_elements=update_cols
-        )
+        with pg_hook.get_conn() as conn:
+            with conn.cursor() as cursor:
+                for record in clean_records:
+                    upsert_sql = f"""
+                    INSERT INTO {POSTGRES_TABLE} (ticker, trade_date, volume, vwap, "open", "close", high, low, transactions)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (ticker, trade_date) DO UPDATE SET
+                        volume = EXCLUDED.volume,
+                        vwap = EXCLUDED.vwap,
+                        "open" = EXCLUDED."open",
+                        "close" = EXCLUDED."close",
+                        high = EXCLUDED.high,
+                        low = EXCLUDED.low,
+                        transactions = EXCLUDED.transactions,
+                        inserted_at = NOW();
+                    """
+                    
+                    values = (
+                        record["ticker"],
+                        record["trade_date"],
+                        record["volume"],
+                        record["vwap"],
+                        record["open"],
+                        record["close"],
+                        record["high"],
+                        record["low"],
+                        record["transactions"],
+                    )
+                    
+                    cursor.execute(upsert_sql, values)
+
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
+
+
+    @task
+    def move_s3_files_to_processed(s3_keys: list[str]):
+        """Moves the processed S3 files to a 'processed' directory."""
+        if not s3_keys:
+            print("No S3 keys to move.")
+            return
+
+        s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
+        keys_to_delete = []
+        for s3_key in s3_keys:
+            if s3_hook.check_for_key(s3_key, bucket_name=BUCKET_NAME):
+                # Destination key replaces the 'raw_data/' prefix with 'processed/'
+                dest_key = s3_key.replace("raw_data/", "processed/", 1)
+                
+                # Copy the object to the new location
+                s3_hook.copy_object(
+                    source_bucket_key=s3_key,
+                    dest_bucket_key=dest_key,
+                    source_bucket_name=BUCKET_NAME,
+                    dest_bucket_name=BUCKET_NAME,
+                )
+                keys_to_delete.append(s3_key)
+            else:
+                print(f"Key {s3_key} not found, skipping.")
+        
+        # Delete the original objects
+        if keys_to_delete:
+            s3_hook.delete_objects(bucket=BUCKET_NAME, keys=keys_to_delete)
+
+        print(f"Successfully moved {len(keys_to_delete)} files to 'processed/' directory.")
+
 
     # --- Task Flow Definition ---
     s3_keys = get_s3_keys_from_manifest()
     key_batches = batch_s3_keys(s3_keys)
     transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
     flat_records = flatten_results(transformed_batches)
-    load_to_postgres_incremental(flat_records)
+    load_op = load_to_postgres_incremental(flat_records)
+    
+    # The new task depends on the successful completion of the load operation
+    move_op = move_s3_files_to_processed(s3_keys)
+    load_op >> move_op
 
 stocks_polygon_load_dag()
