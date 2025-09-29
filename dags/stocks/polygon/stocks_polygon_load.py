@@ -115,8 +115,7 @@ def stocks_polygon_load_dag():
         rows_to_insert = [tuple(rec.values()) for rec in clean_records]
         target_fields = list(clean_records[0].keys())
         
-        update_cols = [f'"{col}" = EXCLUDED."{col}"' for col in target_fields if col not in ["ticker", "trade_date"]]
-        update_cols.append('"inserted_at" = NOW()')
+        update_cols = [col for col in target_fields if col not in ["ticker", "trade_date"]]
         
         pg_hook.insert_rows(
             table=POSTGRES_TABLE,
@@ -125,7 +124,7 @@ def stocks_polygon_load_dag():
             commit_every=1000,
             on_conflict="do_update",
             conflict_target=["ticker", "trade_date"],
-            index_elements=update_cols
+            update_columns=update_cols
         )
         print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
@@ -137,22 +136,29 @@ def stocks_polygon_load_dag():
             return
 
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
+        keys_to_delete = []
         for s3_key in s3_keys:
-            # Destination key adds the 'processed/' prefix
-            dest_key = f"processed/{s3_key}"
-            
-            # Copy the object to the new location
-            s3_hook.copy_object(
-                source_bucket_key=s3_key,
-                dest_bucket_key=dest_key,
-                source_bucket_name=BUCKET_NAME,
-                dest_bucket_name=BUCKET_NAME,
-            )
-            
-            # Delete the original object
-            s3_hook.delete_objects(bucket=BUCKET_NAME, keys=s3_key)
+            if s3_hook.check_for_key(s3_key, bucket_name=BUCKET_NAME):
+                # Destination key replaces the 'raw_data/' prefix with 'processed/'
+                dest_key = s3_key.replace("raw_data/", "processed/", 1)
+                
+                # Copy the object to the new location
+                s3_hook.copy_object(
+                    source_bucket_key=s3_key,
+                    dest_bucket_key=dest_key,
+                    source_bucket_name=BUCKET_NAME,
+                    dest_bucket_name=BUCKET_NAME,
+                )
+                keys_to_delete.append(s3_key)
+            else:
+                print(f"Key {s3_key} not found, skipping.")
+        
+        # Delete the original objects
+        if keys_to_delete:
+            s3_hook.delete_objects(bucket=BUCKET_NAME, keys=keys_to_delete)
 
-        print(f"Successfully moved {len(s3_keys)} files to 'processed/' directory.")
+        print(f"Successfully moved {len(keys_to_delete)} files to 'processed/' directory.")
+
 
     # --- Task Flow Definition ---
     s3_keys = get_s3_keys_from_manifest()
