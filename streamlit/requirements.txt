@@ -2,3 +2,4 @@ streamlit
 pandas
 psycopg2-binary
 numpy
+plotly
