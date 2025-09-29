@@ -47,26 +47,24 @@ LIMIT 5;
 
 The tech stack has been expanded to include a Streamlit application. This provides an interactive, user-friendly dashboard for visualizing and analyzing the ingested stock data, offering a clear and tangible view of the pipeline's output.
 
-<img width="1818" height="999" alt="Capture" src="https://github.com/user-attachments/assets/3ae2e939-03bd-46e2-b8c9-15c15c1ec07f" />
+<img width="1799" height="718" alt="Capture4" src="https://github.com/user-attachments/assets/566e9e7f-cabf-4afa-ab14-38a98bab94d0" />
 
 ## Using the Interactive Dashboard
 
 The Streamlit dashboard allows you to interactively backtest a momentum trading strategy. Here's how to use it:
 
-  1. **Select a Ticker**: Use the dropdown menu in the sidebar to choose a stock you want to analyze.
+  1. **Select Ticker and Timeframe**:
+       * Use the "**Select Ticker**" dropdown in the sidebar to choose a stock.
+       * Use the "**Start Date**" and "**End Date**" selectors to focus on a specific period. The dashboard will display an interactive candlestick chart for the selected range.
   2. **Configure the Strategy**: In the sidebar, adjust the parameters for the backtest:
-       * **Moving Averages**: Set the short-term and long-term windows.
-       * **RSI**: Configure the RSI period and the "overbought" threshold to filter signals.
-  3. **Run the Backtest**: Click the "Run Backtest" button.
-  4. **Analyze Results**: The dashboard will display the backtest results, including:
-       * A chart showing your portfolio's value over time.
-       * Performance metrics like Total Return and the Sharpe Ratio.
+       * In the "**Momentum Strategy Backtest**" section, adjust the parameters for the moving averages and RSI to define your trading logic.
+  3. **Customize Chart Options**:
+       * Use the "**Select metrics to display**" multi-select box to choose which indicators (Moving Averages, RSI, Volume) you want to overlay on the charts.
+  4. **Run the Backtest and Analyze Results**:
+       * Click the "**Run Backtest**" button.
+       * The dashboard will display the results, including an interactive chart showing the buy/sell signals on the price line, your portfolio's value over time, and key performance metrics like Total Return and Sharpe Ratio.
 
-This allows you to experiment with different parameters to see how they affect the strategy's historical performance.
-
-<img width="1791" height="905" alt="Capture2" src="https://github.com/user-attachments/assets/155cae7d-d18a-4b0c-a951-2ef32eaf0f87" />
-
-<img width="1769" height="642" alt="Capture3" src="https://github.com/user-attachments/assets/f955d416-4f9a-4781-8704-6e80f8622b90" />
+<img width="1809" height="996" alt="Capture5" src="https://github.com/user-attachments/assets/64bf2e83-cf31-4263-8a8b-6493668b66b5" />
 
 ---
 
@@ -126,9 +124,9 @@ This project serves as a strong foundation for a robust financial data platform.
 * [x] **Implement an Incremental Loading Strategy**: Evolve the data loading pattern from "truncate and load" to an incremental approach. This will preserve historical data and significantly improve performance by only processing new or updated records on each run.
 * [x] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
 * [x] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
-* [ ] **Build Out the Streamlit Dashboard**: Expand the Streamlit application to include more advanced features, such as:
-  - Backtesting Scenarios: Allow users to define and run backtesting scenarios for different trading strategies.
-  - Customizable Visualizations: Add more charting options and allow users to customize the displayed metrics and timeframes.
+* [x] **Build Out the Streamlit Dashboard**: Expand the Streamlit application to include more advanced features, such as:
+  * Backtesting Scenarios: Allow users to define and run backtesting scenarios for different trading strategies.
+  * Customizable Visualizations: Add more charting options and allow users to customize the displayed metrics and timeframes.
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
 
 ## Documentation

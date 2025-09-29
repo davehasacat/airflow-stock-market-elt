@@ -25,3 +25,29 @@ models:
         description: "The trading volume for the day."
       - name: daily_price_range
         description: "The difference between the high and low price for the day, indicating volatility."
+  - name: fct_polygon__stock_bars_performance_sp500
+    description: "Final analytics-ready model showing daily stock performance metrics for companies listed in the S&P500. This is the primary model for BI tools and analysis."
+    columns:
+      - name: stock_bar_id
+        description: "The unique identifier for a single day's stock bar (ticker + trade_date)."
+        tests:
+          - unique
+          - not_null
+      - name: ticker
+        description: "The stock ticker symbol."
+      - name: trade_date
+        description: "The date of the stock bar."
+      - name: close_price
+        description: "The closing price for the day."
+      - name: moving_avg_20d
+        description: "The 20-day simple moving average of the closing price."
+      - name: moving_avg_50d
+        description: "The 50-day simple moving average of the closing price."
+      - name: moving_avg_120d
+        description: "The 120-day simple moving average of the closing price."
+      - name: price_change_1d
+        description: "The change in closing price from the previous day."
+      - name: volume
+        description: "The trading volume for the day."
+      - name: daily_price_range
+        description: "The difference between the high and low price for the day, indicating volatility."
