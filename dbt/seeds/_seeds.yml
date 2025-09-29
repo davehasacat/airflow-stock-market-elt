@@ -1,0 +1,13 @@
+version: 2
+
+seeds:
+  - name: sp500_tickers
+    description: "A static list of company tickers included in the S&P 500 index."
+    columns:
+      - name: ticker
+        description: "The stock ticker symbol."
+        tests:
+          - unique
+          - not_null
+      - name: company_name
+        description: "The name of the company."

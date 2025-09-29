@@ -125,8 +125,8 @@ This project serves as a strong foundation for a robust financial data platform.
 * [x] **Build Out dbt Marts Layer**: With a robust data foundation in place, the final step is to create the analytics layer. This involves building dbt models for key financial indicators (e.g., moving averages, volatility metrics) that will directly feed into back-testing trading strategies.
 * [x] **Develop a Data Visualization GUI with Streamlit**: Build an interactive dashboard using Streamlit to display the stock data and serve as the user interface for backtesting analysis. Streamlit is recommended for its speed of development, allowing for rapid prototyping of a powerful, Python-based GUI.
 * [x] **Build Out the Streamlit Dashboard**: Expand the Streamlit application to include more advanced features, such as:
-  - Backtesting Scenarios: Allow users to define and run backtesting scenarios for different trading strategies.
-  - Customizable Visualizations: Add more charting options and allow users to customize the displayed metrics and timeframes.
+  * Backtesting Scenarios: Allow users to define and run backtesting scenarios for different trading strategies.
+  * Customizable Visualizations: Add more charting options and allow users to customize the displayed metrics and timeframes.
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
 
 ## Documentation
