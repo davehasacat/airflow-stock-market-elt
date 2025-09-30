@@ -9,9 +9,10 @@ from airflow.providers.postgres.hooks.postgres import PostgresHook
 from airflow.exceptions import AirflowSkipException
 from psycopg2.extras import execute_values
 
-# Import the shared Dataset objects
+# Import the shared Dataset objects for data-driven scheduling
 from dags.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
 
+# Define the DAG
 @dag(
     dag_id="stocks_polygon_load",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
@@ -21,6 +22,12 @@ from dags.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
     dagrun_timeout=timedelta(hours=2),
 )
 def stocks_polygon_load_dag():
+    """
+    This DAG is responsible for loading the raw JSON data from S3 into a
+    PostgreSQL data warehouse. It is triggered by the completion of the
+    'stocks_polygon_ingest' DAG.
+    """
+    # Define connection and configuration variables from environment variables or use defaults
     S3_CONN_ID = os.getenv("S3_CONN_ID", "minio_s3")
     POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
     BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
@@ -29,7 +36,10 @@ def stocks_polygon_load_dag():
 
     @task
     def get_s3_keys_from_manifest() -> list[str]:
-        """Reads the list of S3 keys from the 'latest' manifest file."""
+        """
+        Reads the list of S3 keys from the 'latest' manifest file, which was
+        created by the upstream 'ingest' DAG.
+        """
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         manifest_key = "manifests/manifest_latest.txt"
         if not s3_hook.check_for_key(manifest_key, bucket_name=BUCKET_NAME):
@@ -43,20 +53,26 @@ def stocks_polygon_load_dag():
 
     @task
     def batch_s3_keys(s3_keys: list[str]) -> list[list[str]]:
-        """Batches S3 keys for parallel processing."""
+        """
+        Batches S3 keys for parallel processing in downstream tasks.
+        """
         batches = [s3_keys[i:i + BATCH_SIZE] for i in range(0, len(s3_keys), BATCH_SIZE)]
         print(f"Created {len(batches)} batches of approximately {BATCH_SIZE} keys each.")
         return batches
 
     @task
     def transform_batch(batch_of_keys: list[str]) -> dict:
-        """Transforms a batch of S3 files and returns records and successful keys."""
+        """
+        Reads a batch of JSON files from S3, extracts the relevant data,
+        and transforms it into a clean, tabular format.
+        """
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         clean_records, successful_keys = [], []
         for s3_key in batch_of_keys:
             try:
                 file_content = s3_hook.read_key(key=s3_key, bucket_name=BUCKET_NAME)
                 data = json.loads(file_content)
+                # Ensure the JSON file contains the expected data structure
                 if data.get("resultsCount") == 1 and data.get("results"):
                     result = data["results"][0]
                     trade_date = pendulum.from_timestamp(result["t"] / 1000).to_date_string()
@@ -74,17 +90,24 @@ def stocks_polygon_load_dag():
 
     @task
     def flatten_results(transformed_batches: list[dict]) -> dict:
-        """Flattens results from all transformed batches."""
+        """
+        Flattens the results from all parallel 'transform_batch' tasks into a
+        single list of records and a single list of S3 keys.
+        """
         all_records = [rec for batch in transformed_batches for rec in batch['records'] if rec]
         all_keys = [key for batch in transformed_batches for key in batch['keys'] if key]
         return {"records": all_records, "keys": all_keys}
 
     @task(outlets=[POSTGRES_DWH_RAW_DATASET])
     def load_to_postgres_incremental(clean_records: list[dict]):
-        """Loads records into Postgres using a bulk 'upsert' within an explicit transaction."""
+        """
+        Loads the transformed records into a PostgreSQL table. This function
+        uses an 'upsert' (update or insert) operation to ensure data integrity
+        and avoid duplicates. This will also trigger the downstream 'dbt' DAG.
+        """
         if not clean_records:
             raise AirflowSkipException("No records to load.")
-
+        # Create the table if it doesn't already exist
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         pg_hook.run(f"""
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
@@ -94,13 +117,14 @@ def stocks_polygon_load_dag():
             inserted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL, PRIMARY KEY (ticker, trade_date)
         );
         """)
-        
+
         print(f"Preparing to bulk merge {len(clean_records)} records into {POSTGRES_TABLE}.")
         conn = pg_hook.get_conn()
         try:
             with conn.cursor() as cursor:
                 cols = ["ticker", "trade_date", "volume", "vwap", "open", "close", "high", "low", "transactions"]
                 values = [tuple(rec.get(col) for col in cols) for rec in clean_records]
+                # SQL statement for the 'upsert' operation
                 upsert_sql = f"""
                     INSERT INTO {POSTGRES_TABLE} ({', '.join(f'"{c}"' for c in cols)}) VALUES %s
                     ON CONFLICT (ticker, trade_date) DO UPDATE SET
@@ -120,12 +144,17 @@ def stocks_polygon_load_dag():
 
     @task
     def batch_keys_for_move(s3_keys: list[str]) -> list[list[str]]:
-        """Batches the final list of S3 keys to be moved."""
+        """
+        Batches the S3 keys of successfully processed files for the move operation.
+        """
         return [s3_keys[i:i + BATCH_SIZE] for i in range(0, len(s3_keys), BATCH_SIZE)]
 
     @task
     def move_s3_files_to_processed_batch(s3_key_batch: list[str]):
-        """Moves a batch of S3 files to the 'processed' directory."""
+        """
+        Moves a batch of successfully processed S3 files from the 'raw_data'
+        directory to a 'processed' directory for archiving.
+        """
         if not s3_key_batch:
             print("No S3 keys in this batch to move.")
             return
@@ -145,7 +174,7 @@ def stocks_polygon_load_dag():
                 copied_keys_for_deletion.append(s3_key)
             except Exception as e:
                 print(f"ERROR: Failed to copy '{s3_key}'. Error: {e}")
-
+        # Delete the original files after they have been copied
         if copied_keys_for_deletion:
             s3_hook.delete_objects(bucket=BUCKET_NAME, keys=copied_keys_for_deletion)
             print(f"Successfully moved {len(copied_keys_for_deletion)} files.")
@@ -161,7 +190,9 @@ def stocks_polygon_load_dag():
     key_batches_for_move = batch_keys_for_move(flat_data["keys"])
     
     move_op = move_s3_files_to_processed_batch.expand(s3_key_batch=key_batches_for_move)
-    
+
+    # The move operation is dependent on a successful load operation
     load_op >> key_batches_for_move
-    
+
+# Instantiate the DAG
 stocks_polygon_load_dag()
