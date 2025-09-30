@@ -25,9 +25,11 @@ The DAGs are fully decoupled and communicate through **Airflow Datasets**, which
 
 ### Airflow Orchestration
 
-The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, demonstrating the successful execution and data-driven scheduling of all three DAGs.
+The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, including a complete backfill for all trading days in 2025. This demonstrates the successful execution and data-driven scheduling of all three DAGs.
 
-<img width="1822" height="527" alt="Capture2" src="https://github.com/user-attachments/assets/415b89d8-5204-4dfb-98b9-7459e5c46c73" />
+<img width="1828" height="510" alt="Capture" src="https://github.com/user-attachments/assets/b06cc529-7587-4560-8e92-b1967c6e2406" />
+
+<img width="1814" height="457" alt="Capture2" src="https://github.com/user-attachments/assets/0fc23702-fa80-4ef4-a27b-07e991aba98a" />
 
 ### Data Transformation
 
