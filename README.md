@@ -4,13 +4,13 @@ This repository contains a complete, production-grade ELT pipeline for ingesting
 
 ## Table of Contents
 
-* Features
-* Tech Stack
-* Pipeline Architecture
-* Demonstration
-* Getting Started
-* Future Work
-* Documentation
+* [Features](#features)
+* [Tech Stack](#tech-stack)
+* [Pipeline Architecture](#pipeline-architecture)
+* [Demonstration](#demonstration)
+* [Getting Started](#getting-started)
+* [Future Work](#future-work)
+* [Documentation](#documentation)
 
 ## Features
 
