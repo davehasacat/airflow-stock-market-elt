@@ -21,7 +21,7 @@ from dags.datasets import S3_MANIFEST_DATASET
 def stocks_polygon_ingest_dag():
     S3_CONN_ID = os.getenv("S3_CONN_ID", "minio_s3")
     BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
-    BATCH_SIZE = 1000
+    BATCH_SIZE = 500
 
     @task(pool="api_pool")
     def get_and_batch_tickers_to_s3() -> list[str]:
