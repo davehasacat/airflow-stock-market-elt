@@ -47,7 +47,7 @@ def full_stack_connection_test_dag():
         pg_hook.get_first("SELECT 1;")
         print("Postgres connection successful.")
 
-    # This TaskGroup will find your dbt project, parse it, and create an Airflow task for the specified model.
+    # This TaskGroup finds the dbt project, parse it, and creates an Airflow task for the specified model.
     test_dbt_connection = DbtTaskGroup(
         group_id="test_dbt_connection",
         project_config=ProjectConfig(dbt_project_path=DBT_PROJECT_DIR),
