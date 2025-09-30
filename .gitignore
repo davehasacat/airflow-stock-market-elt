@@ -11,3 +11,4 @@ airflow.db
 .user.yml
 dbt/logs
 dbt/target
+/images
