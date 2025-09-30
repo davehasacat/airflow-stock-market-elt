@@ -38,7 +38,7 @@ The ELT process is orchestrated by three modular and data-driven Airflow DAGs th
 
 The DAGs are fully decoupled and communicate through **Airflow Datasets**, which are URIs that represent a piece of data. This creates a more resilient, event-driven workflow.
 
-<img width="5468" height="4808" alt="image" src="https://github.com/user-attachments/assets/947aba94-57f9-49bf-80d0-980b9c60ca5f" />
+<img width="3520" height="5428" alt="image" src="https://github.com/user-attachments/assets/9d725b62-4b9b-476c-931d-ae4afaa464f6" />
 
 1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage. Upon completion, it writes a list of all created file keys to a manifest file and **produces to an S3 Dataset** (`s3://test/manifests`).
 
