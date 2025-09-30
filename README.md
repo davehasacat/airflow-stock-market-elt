@@ -118,6 +118,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
 This project serves as a strong foundation for a robust financial data platform. The next steps for expanding this project include:
 
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
+* [ ] **Add a Variety of Backtesting Strategies**: Implement additional backtesting strategies beyond the current momentum-based approach to allow for more comprehensive analysis.
 
 ## Documentation
 
