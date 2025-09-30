@@ -111,7 +111,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     )
     ```
 
-6. **View the Dashboard**:Once the pipeline has run successfully, navigate to the Streamlit dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
+6. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Streamlit dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
 
 ## Future Work
 
