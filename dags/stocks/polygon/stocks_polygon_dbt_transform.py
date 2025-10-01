@@ -5,7 +5,9 @@ from airflow.decorators import dag
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
 
 # Import the shared Dataset object that this DAG consumes
+# Import email alert function
 from dags.datasets import POSTGRES_DWH_RAW_DATASET
+from dags.utils import send_failure_email
 
 # --- dbt Configuration ---
 # Set the directory of the dbt project and the path to the dbt executable
@@ -20,6 +22,9 @@ DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
     schedule=[POSTGRES_DWH_RAW_DATASET],
     catchup=False,
     tags=["dbt", "transform", "polygon"],
+    default_args={
+        "on_failure_callback": send_failure_email
+    },
     doc_md="""
     ### dbt Transformation DAG for Polygon.io Data
 
