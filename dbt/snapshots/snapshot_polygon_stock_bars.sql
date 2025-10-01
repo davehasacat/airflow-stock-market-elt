@@ -1,4 +1,4 @@
-{% snapshot snapshot_stock_bars %}
+{% snapshot snapshot_polygon_stock_bars %}
 
 {{
     config(
