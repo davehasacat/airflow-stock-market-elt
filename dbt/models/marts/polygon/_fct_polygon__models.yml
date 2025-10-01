@@ -35,6 +35,11 @@ models:
           - not_null
       - name: ticker
         description: "The stock ticker symbol."
+        tests:
+          - relationships:
+              arguments:
+                to: ref('sp500_tickers')
+                field: ticker
       - name: trade_date
         description: "The date of the stock bar."
       - name: close_price
