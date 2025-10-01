@@ -14,3 +14,13 @@ stock_market_elt:
       dbname: "{{ env_var('POSTGRES_DB') }}"
       schema: public # The schema where dbt will build models
       threads: 4 # Number of parallel threads dbt can use
+  # This 'ci' profile is used only for the Docker build
+    ci:
+      type: postgres
+      host: "db_host"
+      user: "db_user"
+      password: "db_password"
+      port: 5432
+      dbname: "db_name"
+      schema: "public"
+      threads: 4
