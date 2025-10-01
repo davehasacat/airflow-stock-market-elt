@@ -2,7 +2,7 @@ from __future__ import annotations
 import os
 import pendulum
 from airflow.decorators import dag
-from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
+from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig, RenderConfig
 
 # Import the shared Dataset object that this DAG consumes
 # Import email alert function
@@ -52,11 +52,18 @@ def stocks_polygon_dbt_transform_dag():
             profiles_yml_filepath=os.path.join(DBT_PROJECT_DIR, "profiles.yml"),
         ),
         # Configure the execution environment, including the dbt executable path
-        execution_config=ExecutionConfig(dbt_executable_path=DBT_EXECUTABLE_PATH),
+        # Disabling the automatic dependency installation.
+        execution_config=ExecutionConfig(
+            dbt_executable_path=DBT_EXECUTABLE_PATH),
         # Define arguments for the dbt command
         operator_args={
-            "dbt_cmd": "build" # The 'build' command will run all models, tests, seeds, and snapshots
-        }
+            "dbt_cmd": "build", # The 'build' command will run all models, tests, seeds, and snapshots
+            "install_deps":False
+        },
+        # Add a RenderConfig to explicitly disable dependency installation during rendering
+        render_config=RenderConfig(
+            dbt_deps=False
+        )
     )
 
 # Instantiate the DAG
