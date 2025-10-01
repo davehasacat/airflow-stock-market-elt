@@ -6,7 +6,7 @@
 }}
 
 with source as (
-    select * from {{ source('public', 'source_polygon_stock_bars_daily') }}
+    select * from {{ ref('snapshot_polygon_stock_bars') }} where dbt_valid_to is null
 ),
 
 renamed_and_casted as (

@@ -9,7 +9,7 @@ sources:
 
 models:
   - name: stg_polygon__stock_bars_casted
-    description: "Cleans and renames the raw Polygon.io stock bar data."
+    description: "Cleans and renames data from the stock_bars snapshot, selecting only the currently valid records. This model serves as the foundation for all downstream transformations."
     columns:
       - name: stock_bar_id
         description: "The unique identifier for a single day's stock bar."
