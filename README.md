@@ -17,6 +17,7 @@ This repository contains a complete, production-grade ELT pipeline for ingesting
 * **Scalable, High-Throughput Ingestion**: The entire pipeline is designed with modern, parallel processing patterns to efficiently handle tens of thousands of stock tickers.
 * **Data-Driven, Decoupled DAGs**: The Airflow DAGs are fully decoupled and communicate through Airflow Datasets, creating a resilient, event-driven workflow.
 * **Incremental Loading Strategy**: The data loading pattern uses an incremental approach to preserve historical data and significantly improve performance by only processing new or updated records on each run.
+* **Historical Data Tracking with dbt Snapshots**: Leverages dbt snapshots to track changes to the raw stock data over time, creating a complete historical record of every change.
 * **Robust Data Transformations**: The project uses dbt Core to create a final analytics layer with key financial indicators (e.g., moving averages, volatility metrics) that directly feed into the back-testing of trading strategies.
 * **Interactive Data Visualization with Streamlit**: An interactive dashboard built with Streamlit serves as the user interface for displaying stock data and backtesting analysis.
 * **Backtesting Scenarios**: The Streamlit application allows users to define and run backtesting scenarios for different trading strategies.
