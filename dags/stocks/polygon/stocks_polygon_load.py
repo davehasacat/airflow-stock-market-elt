@@ -32,7 +32,7 @@ def stocks_polygon_load_dag():
     POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
     BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
     POSTGRES_TABLE = "source_polygon_stock_bars_daily"
-    BATCH_SIZE = 500
+    BATCH_SIZE = 1500
 
     @task
     def get_s3_keys_from_manifest() -> list[str]:
