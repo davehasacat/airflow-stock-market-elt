@@ -46,8 +46,16 @@ def calculate_rsi(data, window=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-# --- Backtesting Engine ---
-def run_backtest(df, short_window, long_window, rsi_period, rsi_overbought):
+def calculate_bollinger_bands(data, window=20, num_std_dev=2):
+    """Calculates Bollinger Bands."""
+    rolling_mean = data['close_price'].rolling(window=window).mean()
+    rolling_std = data['close_price'].rolling(window=window).std()
+    upper_band = rolling_mean + (rolling_std * num_std_dev)
+    lower_band = rolling_mean - (rolling_std * num_std_dev)
+    return upper_band, lower_band
+
+# --- Backtesting Engines ---
+def run_momentum_backtest(df, short_window, long_window, rsi_period, rsi_overbought):
     signals = pd.DataFrame(index=df.index)
     signals['price'] = df['close_price']
     signals['volume'] = df['volume']
@@ -58,11 +66,33 @@ def run_backtest(df, short_window, long_window, rsi_period, rsi_overbought):
     signals['rsi'] = calculate_rsi(df, rsi_period)
 
     signals['signal'][short_window:] = np.where(
-        (signals[f'ma_{short_window}'][short_window:] > signals[f'ma_{long_window}'][short_window:]) & 
-        (signals['rsi'][short_window:] < rsi_overbought), 1.0, 0.0)   
+        (signals[f'ma_{short_window}'][short_window:] > signals[f'ma_{long_window}'][short_window:]) &
+        (signals['rsi'][short_window:] < rsi_overbought), 1.0, 0.0)
 
     signals['positions'] = signals['signal'].diff()
+    return signals
 
+def run_mean_reversion_backtest(df, window, num_std_dev):
+    signals = pd.DataFrame(index=df.index)
+    signals['price'] = df['close_price']
+    signals['volume'] = df['volume']
+    signals['signal'] = 0.0
+
+    signals['upper_band'], signals['lower_band'] = calculate_bollinger_bands(df, window, num_std_dev)
+
+    # Buy when price crosses below lower band
+    signals['signal'] = np.where(signals['price'] < signals['lower_band'], 1.0, signals['signal'])
+    # Sell when price crosses above upper band
+    signals['signal'] = np.where(signals['price'] > signals['upper_band'], 0.0, signals['signal'])
+
+    # Ensure we are forward-filling the signal
+    signals['signal'] = signals['signal'].ffill()
+
+    signals['positions'] = signals['signal'].diff()
+    return signals
+
+
+def calculate_portfolio(signals, df):
     initial_capital = float(10000.0)
     positions = pd.DataFrame(index=signals.index).fillna(0.0)
     positions['stock'] = 100 * signals['signal']
@@ -75,7 +105,7 @@ def run_backtest(df, short_window, long_window, rsi_period, rsi_overbought):
     portfolio['total'] = portfolio['cash'] + portfolio['holdings']
     portfolio['returns'] = portfolio['total'].pct_change()
 
-    return portfolio, signals
+    return portfolio
 
 # --- Main App Logic ---
 try:
@@ -112,21 +142,32 @@ try:
 
 
         # --- Backtesting Section ---
-        st.sidebar.header("Momentum Strategy Backtest")
-        short_ma = st.sidebar.number_input("Short-term MA (days)", 5, 50, 20)
-        long_ma = st.sidebar.number_input("Long-term MA (days)", 20, 200, 50)
-        rsi_p = st.sidebar.number_input("RSI Period (days)", 7, 30, 14)
-        rsi_ob = st.sidebar.number_input("RSI Overbought Threshold", 60, 90, 70)
+        st.sidebar.header("Backtesting Strategy")
+        strategy = st.sidebar.selectbox("Choose a Strategy", ["Momentum", "Mean Reversion"])
 
-        # --- Customizable Metrics ---
-        st.sidebar.header("Chart Options")
-        available_metrics = [f'MA {short_ma}', f'MA {long_ma}', 'RSI', 'Volume']
-        selected_metrics = st.sidebar.multiselect("Select metrics to display:", available_metrics, default=[f'MA {short_ma}', f'MA {long_ma}'])
+        if strategy == "Momentum":
+            st.sidebar.subheader("Momentum Parameters")
+            short_ma = st.sidebar.number_input("Short-term MA (days)", 5, 50, 20)
+            long_ma = st.sidebar.number_input("Long-term MA (days)", 20, 200, 50)
+            rsi_p = st.sidebar.number_input("RSI Period (days)", 7, 30, 14)
+            rsi_ob = st.sidebar.number_input("RSI Overbought Threshold", 60, 90, 70)
+        elif strategy == "Mean Reversion":
+            st.sidebar.subheader("Mean Reversion Parameters")
+            bb_window = st.sidebar.number_input("Bollinger Band Window (days)", 10, 50, 20)
+            bb_std_dev = st.sidebar.number_input("Bollinger Band Std Dev", 1.0, 3.0, 2.0, 0.5)
+
 
         if st.sidebar.button("Run Backtest"):
             st.header("Backtest Results")
 
-            portfolio, signals = run_backtest(df_selection, short_ma, long_ma, rsi_p, rsi_ob)
+            if strategy == "Momentum":
+                signals = run_momentum_backtest(df_selection, short_ma, long_ma, rsi_p, rsi_ob)
+                available_metrics = [f'MA {short_ma}', f'MA {long_ma}', 'RSI']
+            elif strategy == "Mean Reversion":
+                signals = run_mean_reversion_backtest(df_selection, bb_window, bb_std_dev)
+                available_metrics = ['Bollinger Bands']
+
+            portfolio = calculate_portfolio(signals, df_selection)
 
             st.subheader("Portfolio Value Over Time")
             st.line_chart(portfolio['total'])
@@ -137,10 +178,13 @@ try:
             signals_fig.add_trace(go.Scatter(x=signals.index, y=signals['price'], mode='lines', name='Price'))
 
             # Plot selected metrics
-            if f'MA {short_ma}' in selected_metrics:
+            if strategy == "Momentum":
                 signals_fig.add_trace(go.Scatter(x=signals.index, y=signals[f'ma_{short_ma}'], mode='lines', name=f'MA {short_ma}'))
-            if f'MA {long_ma}' in selected_metrics:
                 signals_fig.add_trace(go.Scatter(x=signals.index, y=signals[f'ma_{long_ma}'], mode='lines', name=f'MA {long_ma}'))
+            elif strategy == "Mean Reversion":
+                 signals_fig.add_trace(go.Scatter(x=signals.index, y=signals['upper_band'], mode='lines', name='Upper Band', line=dict(color='gray', dash='dash')))
+                 signals_fig.add_trace(go.Scatter(x=signals.index, y=signals['lower_band'], mode='lines', name='Lower Band', line=dict(color='gray', dash='dash')))
+
 
             # Add buy/sell markers
             buy_signals = signals.loc[signals['positions'] == 1.0]
@@ -151,16 +195,16 @@ try:
             st.plotly_chart(signals_fig, use_container_width=True)
 
             # Separate charts for RSI and Volume if selected
-            if 'RSI' in selected_metrics:
+            if strategy == "Momentum":
                 st.subheader("Relative Strength Index (RSI)")
                 st.line_chart(signals['rsi'])
-            if 'Volume' in selected_metrics:
-                st.subheader("Volume")
-                st.bar_chart(signals['volume'])
+
+            st.subheader("Volume")
+            st.bar_chart(signals['volume'])
 
             st.subheader("Performance Metrics")
             returns = portfolio['returns'].dropna()
-            sharpe_ratio = (returns.mean() / returns.std()) * np.sqrt(252)
+            sharpe_ratio = (returns.mean() / returns.std()) * np.sqrt(252) if returns.std() > 0 else 0
 
             col1, col2, col3 = st.columns(3)
             col1.metric("Total Return", f"{((portfolio['total'][-1] / portfolio['total'][0]) - 1) * 100:.2f}%")
