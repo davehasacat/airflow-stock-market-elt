@@ -7,15 +7,28 @@ USER root
 RUN python -m venv dbt_venv
 
 # Install dbt and your database adapter inside the virtual environment.
-# Replace dbt-postgres with your specific adapter (e.g., dbt-snowflake, dbt-bigquery).
 RUN /usr/local/airflow/dbt_venv/bin/pip install --no-cache-dir dbt-postgres==1.9.0
 
-# Copy your local dbt project into the container.
-# The Astro CLI automatically mounts project files, but this ensures they are available
-# inside the Docker image for local development.
-# This copies everything from your local 'dbt' folder into the container's '/usr/local/airflow/dbt' folder.
+# Create the target dbt directory
+RUN mkdir -p /usr/local/airflow/dbt
+
+# --- Optimized Dependency Installation ---
+# Copy only the files needed to install dependencies
+COPY dbt/packages.yml /usr/local/airflow/dbt/packages.yml
+COPY dbt/dbt_project.yml /usr/local/airflow/dbt/dbt_project.yml
+
+# Install dbt packages. This layer is only rebuilt when packages.yml changes.
+RUN /usr/local/airflow/dbt_venv/bin/dbt deps --project-dir /usr/local/airflow/dbt
+
+# --- Copy and Parse the Full Project ---
+# Now copy the rest of the dbt project files
 COPY dbt /usr/local/airflow/dbt
 
+# Parse the project to generate manifest.json without a database connection.
+RUN /usr/local/airflow/dbt_venv/bin/dbt parse \
+    --project-dir /usr/local/airflow/dbt \
+    --profiles-dir /usr/local/airflow/dbt \
+    --target ci
+
 # Switch back to the default Airflow user for running the application.
-# This is a security best practice.
 USER astro
