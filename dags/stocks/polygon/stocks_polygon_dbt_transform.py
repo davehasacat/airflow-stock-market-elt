@@ -17,7 +17,7 @@ DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
 
 @dag(
     dag_id="stocks_polygon_dbt_transform",
-    start_date=pendulum.datetime(2024, 1, 1, tz="UTC"),
+    start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
      # This DAG is scheduled to run only when the POSTGRES_DWH_RAW_DATASET is updated by the 'load' DAG
     schedule=[POSTGRES_DWH_RAW_DATASET],
     catchup=False,
