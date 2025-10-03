@@ -44,18 +44,18 @@ services:
       - minio_data:/data
     networks:
       - stocks-elt_default
-  streamlit:
-    image: streamlit-app
-    container_name: streamlit
+  dashboard:
+    image: dashboard-app
+    container_name: dashboard
     ports:
       - "8501:8501"
     # Use the same environment variables as the postgres_dwh service
-    # to ensure the Streamlit app can connect to it.
+    # to ensure the Dashboard app can connect to it.
     environment:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-    # Add the streamlit service to the same network as the other services
+    # Add the dashboard service to the same network as the other services
     networks:
       - stocks-elt_default
 # add minio folder to airflow after connection is created
