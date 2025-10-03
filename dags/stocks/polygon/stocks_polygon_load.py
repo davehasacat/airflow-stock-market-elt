@@ -15,7 +15,7 @@ from dags.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
 # Define the DAG
 @dag(
     dag_id="stocks_polygon_load",
-    start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
+    start_date=pendulum.datetime(2024, 1, 1, tz="UTC"),
     schedule=[S3_MANIFEST_DATASET],
     catchup=False,
     tags=["load", "polygon"],
