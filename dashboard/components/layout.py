@@ -66,6 +66,10 @@ def create_layout(tickers, df_all):
 
                 html.Button('Run Backtest', id='run-backtest', n_clicks=0),
             ], style={'width': '25%', 'display': 'inline-block', 'vertical-align': 'top'}),
-            html.Div(id='main-content', style={'width': '75%', 'display': 'inline-block'}),
+            dcc.Loading(
+                id="loading-spinner",
+                type="circle", # You can choose "graph", "cube", "circle", "dot", or "default"
+                children=html.Div(id='main-content', style={'width': '75%', 'display': 'inline-block'})
+            )
         ])
     ])
