@@ -20,5 +20,54 @@ models:
           - unique
           - not_null
           - dbt_expectations.expect_column_values_to_match_regex:
-              arguments:
-                regex: '^[A-Z0-9\.]+_[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+              regex: '^[A-Z0-9\.]+_[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+
+      - name: trade_date
+        description: "The date of the stock bar."
+        tests:
+          # Ensures the trade_date is always a valid date format
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: date
+
+      - name: open_price
+        description: "The opening price for the day."
+        tests:
+          # New Test: Prices should never be negative
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "ticker not like '%%CASH%%'" # Example of excluding certain tickers if needed
+
+      - name: high_price
+        description: "The highest price for the day."
+        tests:
+          # New Test: Prices should never be negative
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: low_price
+        description: "The lowest price for the day."
+        tests:
+          # New Test: Prices should never be negative
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: close_price
+        description: "The closing price for the day."
+        tests:
+          # New Test: Prices should never be negative
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+      - name: volume
+        description: "The trading volume for the day."
+        tests:
+          # New Test: Volume should never be negative
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+
+    # New Test: This multi-column test ensures the high price is always greater than or equal to the low price.
+    # This is a critical check for the integrity of candlestick data.
+    tests:
+      - dbt_expectations.expect_table_columns_to_be_greater_than_or_equal_to:
+          column: high_price
+          other_column: low_price
