@@ -1,0 +1,46 @@
+/* General App Styling */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Main App Container */
+#react-entry-point > div {
+    padding: 20px;
+}
+
+/* Header Styling */
+h1, h2, h3 {
+    color: #007bff;
+}
+
+/* Control Panel Styling */
+.control-panel {
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Dropdown and Input Styling */
+.Select-control, .DateInput_input, .Input {
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+/* Button Styling */
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
