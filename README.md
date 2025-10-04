@@ -1,6 +1,6 @@
 # Airflow Stock Market ELT Pipeline
 
-This repository contains a complete, production-grade ELT pipeline for ingesting stock market data from the Polygon API, storing it in a data warehouse, and visualizing it with an interactive Streamlit dashboard. The pipeline is orchestrated using Apache Airflow and is designed to run locally using the Astro CLI.
+This repository contains a complete, production-grade ELT pipeline for ingesting stock market data from the Polygon API, storing it in a data warehouse, and visualizing it with an interactive Plotly Dash dashboard. The pipeline is orchestrated using Apache Airflow and is designed to run locally using the Astro CLI.
 
 ## Table of Contents
 
@@ -19,8 +19,8 @@ This repository contains a complete, production-grade ELT pipeline for ingesting
 * **Incremental Loading Strategy**: The data loading pattern uses an incremental approach to preserve historical data and significantly improve performance by only processing new or updated records on each run.
 * **Historical Data Tracking with dbt Snapshots**: Leverages dbt snapshots to track changes to the raw stock data over time, creating a complete historical record of every change.
 * **Robust Data Transformations**: The project uses dbt Core to create a final analytics layer with key financial indicators (e.g., moving averages, volatility metrics) that directly feed into the back-testing of trading strategies.
-* **Interactive Data Visualization with Streamlit**: An interactive dashboard built with Streamlit serves as the user interface for displaying stock data and backtesting analysis.
-* **Backtesting Scenarios**: The Streamlit application allows users to define and run backtesting scenarios for different trading strategies.
+* **Interactive Data Visualization with Plotly Dash**: An interactive dashboard built with Plotly Dash serves as the user interface for displaying stock data and backtesting analysis.
+* **Backtesting Scenarios**: The Dash application allows users to define and run backtesting scenarios for different trading strategies.
 
 ## Tech Stack
 
@@ -29,7 +29,7 @@ This repository contains a complete, production-grade ELT pipeline for ingesting
 * **Data Lake**: MinIO S3
 * **Data Warehouse**: PostgreSQL
 * **Transformation**: dbt Core
-* **Dashboarding**: Streamlit
+* **Dashboarding**: Plotly Dash
 * **Containerization**: Docker
 * **Local Development**: Astro CLI
 
@@ -64,7 +64,7 @@ The screenshots below show a successful, end-to-end run of the entire orchestrat
 
 ### Interactive Dashboard
 
-The Streamlit dashboard allows you to interactively backtest a momentum trading strategy. The dashboard will display the results, including an interactive chart showing the buy/sell signals on the price line, your portfolio's value over time, and key performance metrics like Total Return and Sharpe Ratio.
+The Plotly dashboard allows you to interactively backtest a momentum trading strategy. The dashboard will display the results, including an interactive chart showing the buy/sell signals on the price line, your portfolio's value over time, and key performance metrics like Total Return and Sharpe Ratio.
 
 <img width="1799" height="718" alt="Capture4" src="https://github.com/user-attachments/assets/566e9e7f-cabf-4afa-ab14-38a98bab94d0" />
 
@@ -82,10 +82,10 @@ The Streamlit dashboard allows you to interactively backtest a momentum trading 
 
 1. **Configure Environment Variables**: Create a file named `.env` in the project root. Copy the contents of `.env.example` into it and fill in your POLYGON_API_KEY. The rest of the variables are pre-configured for the local environment.
 
-2. **Build the Streamlit Image**: Before starting the Astro cluster, you need to build the custom Docker image for the Streamlit dashboard. Run the following command from your project's root directory:
+2. **Build the Dash Image**: Before starting the Astro cluster, you need to build the custom Docker image for the Plotly dashboard. Run the following command from your project's root directory:
 
     ``` bash
-    docker build -t streamlit-app ./streamlit
+    docker build -t dashboard-app ./dashboard
     ```
 
 3. **Start the environment** with a single command from your project's root directory:
@@ -112,7 +112,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     )
     ```
 
-6. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Streamlit dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
+6. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
 
 ## Future Work
 
@@ -131,4 +131,4 @@ For more detailed information on the tools and technologies used in this project
 * **[Docker Documentation](https://docs.docker.com/)**
 * **[Minio Documentation](https://docs.min.io/)**
 * **[PostgreSQL Documentation](https://www.postgresql.org/docs/)**
-* **[Streamlit Documentation](https://docs.streamlit.io/)**
+* **[Plotly Dash Documentation](https://dash.plotly.com/)**
