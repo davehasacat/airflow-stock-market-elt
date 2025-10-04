@@ -20,7 +20,8 @@ This repository contains a complete, production-grade ELT pipeline for ingesting
 * **Historical Data Tracking with dbt Snapshots**: Leverages dbt snapshots to track changes to the raw stock data over time, creating a complete historical record of every change.
 * **Robust Data Transformations**: The project uses dbt Core to create a final analytics layer with key financial indicators (e.g., moving averages, volatility metrics) that directly feed into the back-testing of trading strategies.
 * **Interactive Data Visualization with Plotly Dash**: An interactive dashboard built with Plotly Dash serves as the user interface for displaying stock data and backtesting analysis.
-* **Backtesting Scenarios**: The Dash application allows users to define and run backtesting scenarios for different trading strategies.
+* **Multiple Backtesting Scenarios**: The Dash application allows users to define and run backtesting scenarios for a variety of common trading strategies, including **Momentum**, **Mean Reversion**, **MACD**, and **RSI**.
+* **Enhanced UI/UX**: The dashboard features loading spinners for a smooth user experience, interactive charts with volume subplots, and a tabbed layout for organized and insightful results.
 
 ## Tech Stack
 
@@ -109,7 +110,8 @@ The Plotly dashboard allows you to interactively backtest a momentum trading str
     * Inside the container, run `dbt deps` to install the package dependencies for your dbt project:
 
     ``` bash
-    /usr/local/airflow/dbt_venv/bin/dbt deps --project-dir /usr/local/airflow/dbt
+    cd dbt &&
+    /usr/local/airflow/dbt_venv/bin/dbt deps
     ```
 
 6. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline. The initial run will backfill all data for the current year (January 1, 2025, to the present day). **Note that this first run is extensive and will take approximately 7-10 hours to complete**.
@@ -135,7 +137,8 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     * Inside the container, run `dbt build` with the `--full-refresh` flag:
 
     ``` bash
-    /usr/local/airflow/dbt_venv/bin/dbt build --full-refresh --project-dir /usr/local/airflow/dbt
+    cd dbt &&
+    /usr/local/airflow/dbt_venv/bin/dbt build --full-refresh
     ```
 
 8. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
@@ -145,7 +148,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
 This project serves as a strong foundation for a robust financial data platform. The next steps for expanding this project include:
 
 * [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
-* [ ] **Add a Variety of Backtesting Strategies**: Implement additional backtesting strategies beyond the current momentum-based approach to allow for more comprehensive analysis.
+* [ ] **Add Advanced Performance Metrics**: Enhance the backtesting results with more sophisticated metrics like Max Drawdown, Sortino Ratio, and Profit Factor.
 
 ## Documentation
 
