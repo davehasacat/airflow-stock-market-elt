@@ -1,31 +1,8 @@
 import pandas as pd
-import psycopg2
-import os
 import numpy as np
 
-# --- Database Connection ---
-def get_db_connection():
-    conn = psycopg2.connect(
-        host="postgres_dwh",
-        database=os.environ.get("POSTGRES_DB"),
-        user=os.environ.get("POSTGRES_USER"),
-        password=os.environ.get("POSTGRES_PASSWORD"),
-        port="5432"
-    )
-    return conn
-
-# --- Data Loading ---
-def load_data():
-    conn = get_db_connection()
-    query = "SELECT * FROM public.fct_polygon__stock_bars_performance ORDER BY trade_date ASC"
-    df = pd.read_sql(query, conn)
-    conn.close()
-    df['trade_date'] = pd.to_datetime(df['trade_date'])
-    df.set_index('trade_date', inplace=True)
-    return df
-
-# --- Technical Indicator Calculation ---
 def calculate_rsi(data, window=14):
+    """Calculates the Relative Strength Index (RSI)."""
     delta = data['close_price'].diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
     loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
@@ -34,14 +11,15 @@ def calculate_rsi(data, window=14):
     return rsi
 
 def calculate_bollinger_bands(data, window=20, num_std_dev=2):
+    """Calculates the Bollinger Bands."""
     rolling_mean = data['close_price'].rolling(window=window).mean()
     rolling_std = data['close_price'].rolling(window=window).std()
     upper_band = rolling_mean + (rolling_std * num_std_dev)
     lower_band = rolling_mean - (rolling_std * num_std_dev)
     return upper_band, lower_band
 
-# --- Backtesting Engines ---
 def run_momentum_backtest(df, short_window, long_window, rsi_period, rsi_overbought):
+    """Runs a momentum-based backtesting strategy."""
     signals = pd.DataFrame(index=df.index)
     signals['price'] = df['close_price']
     signals['volume'] = df['volume']
@@ -56,6 +34,7 @@ def run_momentum_backtest(df, short_window, long_window, rsi_period, rsi_overbou
     return signals
 
 def run_mean_reversion_backtest(df, window, num_std_dev):
+    """Runs a mean-reversion backtesting strategy."""
     signals = pd.DataFrame(index=df.index)
     signals['price'] = df['close_price']
     signals['volume'] = df['volume']
@@ -68,6 +47,7 @@ def run_mean_reversion_backtest(df, window, num_std_dev):
     return signals
 
 def calculate_portfolio(signals, df):
+    """Calculates the portfolio value over time."""
     initial_capital = float(10000.0)
     positions = pd.DataFrame(index=signals.index).fillna(0.0)
     positions['stock'] = 100 * signals['signal']
@@ -78,7 +58,3 @@ def calculate_portfolio(signals, df):
     portfolio['total'] = portfolio['cash'] + portfolio['holdings']
     portfolio['returns'] = portfolio['total'].pct_change()
     return portfolio
-
-# --- Load data once ---
-df_all = load_data()
-tickers = df_all["ticker"].unique()

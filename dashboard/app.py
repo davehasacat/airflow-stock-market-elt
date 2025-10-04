@@ -1,5 +1,17 @@
 import dash
-import dash_bootstrap_components as dbc
+from components.data import load_data
+from components.layout import create_layout
+from components.callbacks import register_callbacks
 
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
+# --- Main App Logic ---
+df_all = load_data()
+tickers = df_all["ticker"].unique()
+
+app = dash.Dash(__name__)
 server = app.server
+
+app.layout = create_layout(tickers, df_all)
+register_callbacks(app, df_all)
+
+if __name__ == '__main__':
+    app.run_server(host='0.0.0.0', port=8501, debug=True)
