@@ -10,6 +10,14 @@ def calculate_rsi(data, window=14):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
+def calculate_macd(data, short_window=12, long_window=26, signal_window=9):
+    """Calculates the MACD and its signal line."""
+    short_ema = data['close_price'].ewm(span=short_window, adjust=False).mean()
+    long_ema = data['close_price'].ewm(span=long_window, adjust=False).mean()
+    macd_line = short_ema - long_ema
+    signal_line = macd_line.ewm(span=signal_window, adjust=False).mean()
+    return macd_line, signal_line
+
 def calculate_bollinger_bands(data, window=20, num_std_dev=2):
     """Calculates the Bollinger Bands."""
     rolling_mean = data['close_price'].rolling(window=window).mean()
@@ -43,6 +51,32 @@ def run_mean_reversion_backtest(df, window, num_std_dev):
     signals['signal'] = np.where(signals['price'] < signals['lower_band'], 1.0, signals['signal'])
     signals['signal'] = np.where(signals['price'] > signals['upper_band'], 0.0, signals['signal'])
     signals['signal'] = signals['signal'].ffill()
+    signals['positions'] = signals['signal'].diff()
+    return signals
+
+def run_macd_backtest(df, short_window, long_window, signal_window):
+    """Runs a MACD-based backtesting strategy."""
+    signals = pd.DataFrame(index=df.index)
+    signals['price'] = df['close_price']
+    signals['volume'] = df['volume']
+    signals['signal'] = 0.0
+    signals['macd'], signals['signal_line'] = calculate_macd(df, short_window, long_window, signal_window)
+    # Generate buy signal when MACD crosses above signal line
+    signals['signal'] = np.where(signals['macd'] > signals['signal_line'], 1.0, 0.0)
+    signals['positions'] = signals['signal'].diff()
+    return signals
+
+def run_rsi_backtest(df, rsi_period, rsi_oversold, rsi_overbought):
+    """Runs an RSI-based backtesting strategy."""
+    signals = pd.DataFrame(index=df.index)
+    signals['price'] = df['close_price']
+    signals['volume'] = df['volume']
+    signals['signal'] = 0.0
+    signals['rsi'] = calculate_rsi(df, rsi_period)
+    # Buy when RSI crosses above the oversold threshold
+    signals['signal'] = np.where(signals['rsi'] > rsi_oversold, 1.0, 0.0)
+    # Sell when RSI crosses below the overbought threshold
+    signals['signal'] = np.where(signals['rsi'] < rsi_overbought, 0.0, signals['signal'])
     signals['positions'] = signals['signal'].diff()
     return signals
 
