@@ -48,7 +48,7 @@ The DAGs are fully decoupled and communicate through **Airflow Datasets**, which
 
 2. **`stocks_polygon_load`**: This DAG is scheduled to run only when the S3 manifest Dataset is updated. It reads the list of newly created JSON files from the manifest and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion. When the load is successful, it produces to a Postgres Dataset (`postgres_dwh://public/source_polygon_stock_bars_daily`).
 
-3. **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces the corresponding Dataset that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
+3. **`dbt_build`**: When the `load` DAG successfully updates the raw table, it produces the corresponding Dataset that triggers the final `build` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
     * A clean, casted staging model (`stg_polygon__stock_bars_casted`).
     * An enriched intermediate model with technical indicators (`int_polygon__stock_bars_enriched`).
     * A final, analytics-ready facts table (`fct_polygon__stock_bars_performance`).
