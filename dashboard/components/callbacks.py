@@ -1,4 +1,5 @@
 from dash import dcc, html, Input, Output, State
+import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import numpy as np
