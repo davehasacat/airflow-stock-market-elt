@@ -6,8 +6,8 @@ from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
 
 # Import the shared Dataset object that this DAG consumes
 # Import email alert function
-from dags.datasets import POSTGRES_DWH_RAW_DATASET
-from dags.utils import send_failure_email
+from dags.utils.datasets import POSTGRES_DWH_RAW_DATASET
+from dags.utils.utils import send_failure_email
 
 # --- dbt Configuration ---
 # Set the directory of the dbt project and the path to the dbt executable
@@ -16,12 +16,12 @@ DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR")
 DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
 
 @dag(
-    dag_id="stocks_polygon_dbt_transform",
+    dag_id="dbt_build",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
      # This DAG is scheduled to run only when the POSTGRES_DWH_RAW_DATASET is updated by the 'load' DAG
     schedule=[POSTGRES_DWH_RAW_DATASET],
     catchup=False,
-    tags=["dbt", "transform", "polygon"],
+    tags=["dbt", "build"],
     default_args={
         "on_failure_callback": send_failure_email
     },
@@ -34,7 +34,7 @@ DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
     analytics-ready marts.
     """,
 )
-def stocks_polygon_dbt_transform_dag():
+def dbt_build_dag():
     """
     This DAG uses DbtTaskGroup to execute dbt models.
     It is triggered when the raw data table in PostgreSQL is updated.
@@ -61,4 +61,4 @@ def stocks_polygon_dbt_transform_dag():
     )
 
 # Instantiate the DAG
-stocks_polygon_dbt_transform_dag()
+dbt_build_dag()
