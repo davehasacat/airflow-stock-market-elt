@@ -92,3 +92,34 @@ def calculate_portfolio(signals, df):
     portfolio['total'] = portfolio['cash'] + portfolio['holdings']
     portfolio['returns'] = portfolio['total'].pct_change()
     return portfolio
+
+def calculate_advanced_metrics(portfolio, returns):
+    """Calculates advanced performance metrics for a backtest."""
+    
+    # --- Max Drawdown ---
+    # Calculate the cumulative max of the portfolio value
+    cumulative_max = portfolio['total'].cummax()
+    # Calculate the drawdown
+    drawdown = (portfolio['total'] - cumulative_max) / cumulative_max
+    max_drawdown = drawdown.min() * 100 # In percentage
+    
+    # --- Sortino Ratio ---
+    # Calculate downside returns
+    downside_returns = returns[returns < 0]
+    # Calculate downside deviation
+    downside_std = downside_returns.std()
+    # Calculate Sortino Ratio
+    sortino_ratio = (returns.mean() / downside_std) * np.sqrt(252) if downside_std > 0 else 0
+    
+    # --- Profit Factor ---
+    # Calculate gross profits and gross losses
+    gross_profit = returns[returns > 0].sum()
+    gross_loss = abs(returns[returns < 0].sum())
+    # Calculate Profit Factor
+    profit_factor = gross_profit / gross_loss if gross_loss > 0 else float('inf')
+    
+    return {
+        "max_drawdown": f"{max_drawdown:.2f}%",
+        "sortino_ratio": f"{sortino_ratio:.2f}",
+        "profit_factor": f"{profit_factor:.2f}"
+    }

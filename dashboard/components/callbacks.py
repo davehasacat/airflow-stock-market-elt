@@ -108,6 +108,7 @@ def register_callbacks(app, df_all):
         sharpe_ratio = (returns.mean() / returns.std()) * np.sqrt(252) if returns.std() > 0 else 0
         total_return = f"{((portfolio['total'].iloc[-1] / portfolio['total'].iloc[0]) - 1) * 100:.2f}%" if not portfolio.empty and portfolio['total'].iloc[0] != 0 else "N/A"
         num_trades = f"{int(signals['positions'].abs().sum() / 2)}"
+        advanced_metrics = strategies.calculate_advanced_metrics(portfolio, returns)
 
         return [
             html.H2(f"Displaying data for {selected_ticker}"), price_chart, html.H2("Backtest Results"),
@@ -119,7 +120,11 @@ def register_callbacks(app, df_all):
                         html.H3("Performance Metrics"),
                         html.P(f"Total Return: {total_return}"),
                         html.P(f"Sharpe Ratio: {sharpe_ratio:.2f}"),
-                        html.P(f"Number of Trades: {num_trades}")
+                        html.P(f"Number of Trades: {num_trades}"),
+                        html.Hr(),
+                        html.P(f"Max Drawdown: {advanced_metrics['max_drawdown']}"),
+                        html.P(f"Sortino Ratio: {advanced_metrics['sortino_ratio']}"),
+                        html.P(f"Profit Factor: {advanced_metrics['profit_factor']}"),
                     ], style={'padding': '20px'})
                 ])
             ])
