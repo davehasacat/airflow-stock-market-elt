@@ -16,12 +16,12 @@ DBT_PROJECT_DIR = os.getenv("DBT_PROJECT_DIR")
 DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
 
 @dag(
-    dag_id="stocks_dbt_transform",
+    dag_id="dbt_build",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
      # This DAG is scheduled to run only when the POSTGRES_DWH_RAW_DATASET is updated by the 'load' DAG
     schedule=[POSTGRES_DWH_RAW_DATASET],
     catchup=False,
-    tags=["dbt", "transform", "polygon"],
+    tags=["dbt", "build"],
     default_args={
         "on_failure_callback": send_failure_email
     },
