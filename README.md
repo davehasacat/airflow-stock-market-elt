@@ -21,6 +21,8 @@ This repository contains a complete, production-grade ELT pipeline for ingesting
 * **Robust Data Transformations**: The project uses dbt Core to create a final analytics layer with key financial indicators (e.g., moving averages, volatility metrics) that directly feed into the back-testing of trading strategies.
 * **Interactive Data Visualization with Plotly Dash**: An interactive dashboard built with Plotly Dash serves as the user interface for displaying stock data and backtesting analysis.
 * **Multiple Backtesting Scenarios**: The Dash application allows users to define and run backtesting scenarios for a variety of common trading strategies, including **Momentum**, **Mean Reversion**, **MACD**, and **RSI**.
+* **Advanced Performance Metrics**: The backtesting results include a comprehensive set of performance metrics, such as **Max Drawdown**, **Sortino Ratio**, and **Profit Factor**.
+* **Data Quality Monitoring**: A dedicated tab in the dashboard visualizes the results of `dbt` data quality tests, providing transparency into the health of the data pipeline.
 * **Enhanced UI/UX**: The dashboard features loading spinners for a smooth user experience, interactive charts with volume subplots, and a tabbed layout for organized and insightful results.
 
 ## Tech Stack
@@ -65,11 +67,9 @@ The screenshots below show a successful, end-to-end run of the entire orchestrat
 
 ### Interactive Dashboard
 
-The Plotly dashboard allows you to interactively backtest a momentum trading strategy. The dashboard will display the results, including an interactive chart showing the buy/sell signals on the price line, your portfolio's value over time, and key performance metrics like Total Return and Sharpe Ratio.
+The Plotly dashboard provides a comprehensive suite of tools for financial analysis. The "Backtesting" tab allows you to select from multiple trading strategies, adjust their parameters, and interactively backtest them. The results are displayed in a clean, tabbed layout with advanced performance metrics. The "Data Quality" tab provides a transparent view into the health of the underlying data, showing the results of the latest and historical dbt test runs.
 
-<img width="1799" height="718" alt="Capture4" src="https://github.com/user-attachments/assets/566e9e7f-cabf-4afa-ab14-38a98bab94d0" />
-
-<img width="1809" height="996" alt="Capture5" src="https://github.com/user-attachments/assets/64bf2e83-cf31-4263-8a8b-6493668b66b5" />
+-- new images here --
 
 ## Getting Started
 
@@ -100,22 +100,9 @@ The Plotly dashboard allows you to interactively backtest a momentum trading str
     * Log in with the credentials from your `.env` file (default is `minioadmin` / `minioadmin`).
     * Click the **Create a Bucket** button, enter a bucket name (`test` is the default), and click **Create Bucket**.
 
-5. **Install dbt Dependencies**:
-    * Once the Airflow environment is running, open a new terminal window and shell into the scheduler container:
-
-    ``` bash
-    astro dev bash
-    ```
-
-    * Inside the container, run `dbt deps` to install the package dependencies for your dbt project:
-
-    ``` bash
-    cd dbt &&
-    /usr/local/airflow/dbt_venv/bin/dbt deps
-    ```
-
-6. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline. The initial run will backfill all data for the current year (January 1, 2025, to the present day). **Note that this first run is extensive and will take approximately 7-10 hours to complete**.
-If you would like to run a shorter backfill for demonstration purposes, you can change the `start_date` in the `stocks_polygon_ingest.py` DAG:
+5. **Run the Full Pipeline**:
+    * In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline. The initial run will backfill all data for the current year (January 1, 2025, to the present day).
+    * **Note that this first run is extensive and will take approximately 7-10 hours to complete** If you would like to run a shorter backfill for demonstration purposes, you can change the `start_date` in the `stocks_polygon_ingest.py` DAG:
 
     ``` python
     @dag(
@@ -127,7 +114,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     )
     ```
 
-7. **Perform an Initial Full Refresh of dbt Models**:
+6. **Perform an Initial Full Refresh of dbt Models**:
     * After the first run of the pipeline completes, it's a good practice to run a full refresh of your dbt models to ensure the incremental logic builds correctly on the complete historical data. Shell into the scheduler container again:
 
     ``` bash
@@ -141,14 +128,17 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     /usr/local/airflow/dbt_venv/bin/dbt build --full-refresh
     ```
 
-8. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
+7. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
 
 ## Future Work
 
-This project serves as a strong foundation for a robust financial data platform. The next steps for expanding this project include:
+This project is now feature-complete and serves as a strong foundation for a robust financial data platform. Future enhancements could focus on performance, advanced analysis, and production-hardening.
 
-* [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
-* [ ] **Add Advanced Performance Metrics**: Enhance the backtesting results with more sophisticated metrics like Max Drawdown, Sortino Ratio, and Profit Factor.
+* [ ] **Add Strategy Comparison**: Implement a feature to run two backtests and compare their performance metrics and portfolio values side-by-side.
+* [ ] **Performance Optimization**: Explore performance improvements, such as implementing caching for data loads or using `Numba` to accelerate backtesting calculations.
+* [ ] **Add Alerting**: Integrate the data quality pipeline with Airflow alerts to send an email or Slack notification when a `dbt` test fails.
+* [x] ~~**Add Data Quality Monitoring**~~: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
+* [x] ~~**Add Advanced Performance Metrics**~~: Enhance the backtesting results with more sophisticated metrics like Max Drawdown, Sortino Ratio, and Profit Factor.
 
 ## Documentation
 
