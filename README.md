@@ -61,15 +61,19 @@ The DAGs are fully decoupled and communicate through **Airflow Datasets**, which
 
 The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, including a complete backfill for all trading days in 2025. This demonstrates the successful execution and data-driven scheduling of all three DAGs.
 
-<img width="1828" height="510" alt="Capture" src="https://github.com/user-attachments/assets/b06cc529-7587-4560-8e92-b1967c6e2406" />
+<img width="1533" height="692" alt="airflow-final" src="https://github.com/user-attachments/assets/3805aa0f-7a76-4432-9e6a-91d0ae354db5" />
 
-<img width="1814" height="457" alt="Capture2" src="https://github.com/user-attachments/assets/0fc23702-fa80-4ef4-a27b-07e991aba98a" />
+<img width="1755" height="610" alt="airflow-final-2" src="https://github.com/user-attachments/assets/c34f6bc8-0fa0-48f9-b087-e802a3882f42" />
 
 ### Interactive Dashboard
 
 The Plotly dashboard provides a comprehensive suite of tools for financial analysis. The "Backtesting" tab allows you to select from multiple trading strategies, adjust their parameters, and interactively backtest them. The results are displayed in a clean, tabbed layout with advanced performance metrics. The "Data Quality" tab provides a transparent view into the health of the underlying data, showing the results of the latest and historical dbt test runs.
 
--- new images here --
+<img width="1662" height="985" alt="dash-final-1" src="https://github.com/user-attachments/assets/db9ac132-9f14-4d67-949f-1734eb8cfb18" />
+
+<img width="1371" height="589" alt="dash-final-2" src="https://github.com/user-attachments/assets/73f5fb31-1dd9-49f9-80f2-5be8a896614a" />
+
+<img width="1832" height="946" alt="dash-final-3" src="https://github.com/user-attachments/assets/ae239ab7-8a1a-4170-85f1-c71e3b041c29" />
 
 ## Getting Started
 
