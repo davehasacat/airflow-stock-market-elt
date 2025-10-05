@@ -134,7 +134,6 @@ def register_callbacks(app, df_all):
     @app.callback(
         Output('data-quality-content', 'children'),
         Input('dq-interval-component', 'n_intervals'),
-        prevent_initial_call=True
     )
     def update_data_quality_content(n):
         conn = get_db_connection()
