@@ -7,7 +7,7 @@ from components.callbacks import register_callbacks
 df_all = load_data()
 tickers = df_all["ticker"].unique()
 
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
 
 app.layout = create_layout(tickers, df_all)
