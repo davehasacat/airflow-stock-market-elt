@@ -100,8 +100,9 @@ The Plotly dashboard allows you to interactively backtest a momentum trading str
     * Log in with the credentials from your `.env` file (default is `minioadmin` / `minioadmin`).
     * Click the **Create a Bucket** button, enter a bucket name (`test` is the default), and click **Create Bucket**.
 
-5. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline. The initial run will backfill all data for the current year (January 1, 2025, to the present day). **Note that this first run is extensive and will take approximately 7-10 hours to complete**.
-If you would like to run a shorter backfill for demonstration purposes, you can change the `start_date` in the `stocks_polygon_ingest.py` DAG:
+5. **Run the Full Pipeline**:
+    * In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline. The initial run will backfill all data for the current year (January 1, 2025, to the present day).
+    * **Note that this first run is extensive and will take approximately 7-10 hours to complete**. If you would like to run a shorter backfill for demonstration purposes, you can change the `start_date` in the `stocks_polygon_ingest.py` DAG:
 
     ``` python
     @dag(
@@ -113,7 +114,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     )
     ```
 
-6. **Perform an Initial Full Refresh of dbt Models**:
+7. **Perform an Initial Full Refresh of dbt Models**:
     * After the first run of the pipeline completes, it's a good practice to run a full refresh of your dbt models to ensure the incremental logic builds correctly on the complete historical data. Shell into the scheduler container again:
 
     ``` bash
@@ -127,7 +128,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     /usr/local/airflow/dbt_venv/bin/dbt build --full-refresh
     ```
 
-7. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
+8. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
 
 ## Future Work
 
