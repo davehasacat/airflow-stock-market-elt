@@ -9,12 +9,12 @@ from airflow.hooks.base import BaseHook
 from airflow.exceptions import AirflowSkipException
 
 # Import the shared Dataset object, which is used for data-driven scheduling
-from dags.datasets import S3_MANIFEST_DATASET
+from dags.utils.datasets import S3_MANIFEST_DATASET
 
 # Define the DAG
 @dag(
     dag_id="stocks_polygon_ingest",
-    start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
+    start_date=pendulum.datetime(2025, 10, 1, tz="UTC"),
     schedule="0 0 * * 1-5",
     catchup=True,
     tags=["ingestion", "polygon"],

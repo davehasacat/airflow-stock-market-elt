@@ -13,7 +13,7 @@ DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH", "/usr/local/airflow/dbt_v
 POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
 
 @dag(
-    dag_id="dbt_test_runner",
+    dag_id="dbt_test",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     schedule="0 2 * * *", # Runs daily at 2 AM, after the main pipeline
     catchup=False,
@@ -26,7 +26,7 @@ POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
     in the data warehouse for monitoring.
     """,
 )
-def dbt_test_runner_dag():
+def dbt_test_dag():
     """
     This DAG runs dbt tests and loads the results to a table.
     """
@@ -115,4 +115,4 @@ def dbt_test_runner_dag():
     # Set the task dependency
     run_dbt_tests >> parse_and_load_test_results()
 
-dbt_test_runner_dag()
+dbt_test_dag()
