@@ -21,6 +21,8 @@ This repository contains a complete, production-grade ELT pipeline for ingesting
 * **Robust Data Transformations**: The project uses dbt Core to create a final analytics layer with key financial indicators (e.g., moving averages, volatility metrics) that directly feed into the back-testing of trading strategies.
 * **Interactive Data Visualization with Plotly Dash**: An interactive dashboard built with Plotly Dash serves as the user interface for displaying stock data and backtesting analysis.
 * **Multiple Backtesting Scenarios**: The Dash application allows users to define and run backtesting scenarios for a variety of common trading strategies, including **Momentum**, **Mean Reversion**, **MACD**, and **RSI**.
+* **Advanced Performance Metrics**: The backtesting results include a comprehensive set of performance metrics, such as **Max Drawdown**, **Sortino Ratio**, and **Profit Factor**.
+* **Data Quality Monitoring**: A dedicated tab in the dashboard visualizes the results of `dbt` data quality tests, providing transparency into the health of the data pipeline.
 * **Enhanced UI/UX**: The dashboard features loading spinners for a smooth user experience, interactive charts with volume subplots, and a tabbed layout for organized and insightful results.
 
 ## Tech Stack
@@ -40,13 +42,13 @@ The ELT process is orchestrated by three modular and data-driven Airflow DAGs th
 
 The DAGs are fully decoupled and communicate through **Airflow Datasets**, which are URIs that represent a piece of data. This creates a more resilient, event-driven workflow.
 
-<img width="3520" height="5428" alt="image" src="https://github.com/user-attachments/assets/9d725b62-4b9b-476c-931d-ae4afaa464f6" />
+<img width="3520" height="5428" alt="image" src="https://github.com/user-attachments/assets/5af9e779-109f-4566-9bd3-9d8edb819fd8" />
 
 1. **`stocks_polygon_ingest`**: This DAG fetches a complete list of all available stock tickers from the Polygon.io API. It then splits the tickers into small, manageable batches and dynamically creates parallel tasks to ingest the daily OHLCV data for each ticker, landing the raw JSON files in Minio object storage. Upon completion, it writes a list of all created file keys to a manifest file and **produces to an S3 Dataset** (`s3://test/manifests`).
 
 2. **`stocks_polygon_load`**: This DAG is scheduled to run only when the S3 manifest Dataset is updated. It reads the list of newly created JSON files from the manifest and, using a similar batching strategy, loads the data in parallel into a raw table in the Postgres data warehouse. This ensures that the data loading process is just as scalable as the ingestion. When the load is successful, it produces to a Postgres Dataset (`postgres_dwh://public/source_polygon_stock_bars_daily`).
 
-3. **`stocks_polygon_dbt_transform`**: When the `load` DAG successfully updates the raw table, it produces the corresponding Dataset that triggers the final `transform` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
+3. **`dbt_build`**: When the `load` DAG successfully updates the raw table, it produces the corresponding Dataset that triggers the final `build` DAG. This DAG runs `dbt build` to execute all dbt models, which transforms the raw data into:
     * A clean, casted staging model (`stg_polygon__stock_bars_casted`).
     * An enriched intermediate model with technical indicators (`int_polygon__stock_bars_enriched`).
     * A final, analytics-ready facts table (`fct_polygon__stock_bars_performance`).
@@ -59,17 +61,19 @@ The DAGs are fully decoupled and communicate through **Airflow Datasets**, which
 
 The screenshots below show a successful, end-to-end run of the entire orchestrated pipeline in the Airflow UI, including a complete backfill for all trading days in 2025. This demonstrates the successful execution and data-driven scheduling of all three DAGs.
 
-<img width="1828" height="510" alt="Capture" src="https://github.com/user-attachments/assets/b06cc529-7587-4560-8e92-b1967c6e2406" />
+<img width="1533" height="692" alt="airflow-final" src="https://github.com/user-attachments/assets/3805aa0f-7a76-4432-9e6a-91d0ae354db5" />
 
-<img width="1814" height="457" alt="Capture2" src="https://github.com/user-attachments/assets/0fc23702-fa80-4ef4-a27b-07e991aba98a" />
+<img width="1755" height="610" alt="airflow-final-2" src="https://github.com/user-attachments/assets/c34f6bc8-0fa0-48f9-b087-e802a3882f42" />
 
 ### Interactive Dashboard
 
-The Plotly dashboard allows you to interactively backtest a momentum trading strategy. The dashboard will display the results, including an interactive chart showing the buy/sell signals on the price line, your portfolio's value over time, and key performance metrics like Total Return and Sharpe Ratio.
+The Plotly dashboard provides a comprehensive suite of tools for financial analysis. The "Backtesting" tab allows you to select from multiple trading strategies, adjust their parameters, and interactively backtest them. The results are displayed in a clean, tabbed layout with advanced performance metrics. The "Data Quality" tab provides a transparent view into the health of the underlying data, showing the results of the latest and historical dbt test runs.
 
-<img width="1799" height="718" alt="Capture4" src="https://github.com/user-attachments/assets/566e9e7f-cabf-4afa-ab14-38a98bab94d0" />
+<img width="1662" height="985" alt="dash-final-1" src="https://github.com/user-attachments/assets/db9ac132-9f14-4d67-949f-1734eb8cfb18" />
 
-<img width="1809" height="996" alt="Capture5" src="https://github.com/user-attachments/assets/64bf2e83-cf31-4263-8a8b-6493668b66b5" />
+<img width="1371" height="589" alt="dash-final-2" src="https://github.com/user-attachments/assets/73f5fb31-1dd9-49f9-80f2-5be8a896614a" />
+
+<img width="1832" height="946" alt="dash-final-3" src="https://github.com/user-attachments/assets/ae239ab7-8a1a-4170-85f1-c71e3b041c29" />
 
 ## Getting Started
 
@@ -100,22 +104,9 @@ The Plotly dashboard allows you to interactively backtest a momentum trading str
     * Log in with the credentials from your `.env` file (default is `minioadmin` / `minioadmin`).
     * Click the **Create a Bucket** button, enter a bucket name (`test` is the default), and click **Create Bucket**.
 
-5. **Install dbt Dependencies**:
-    * Once the Airflow environment is running, open a new terminal window and shell into the scheduler container:
-
-    ``` bash
-    astro dev bash
-    ```
-
-    * Inside the container, run `dbt deps` to install the package dependencies for your dbt project:
-
-    ``` bash
-    cd dbt &&
-    /usr/local/airflow/dbt_venv/bin/dbt deps
-    ```
-
-6. **Run the Full Pipeline**: In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline. The initial run will backfill all data for the current year (January 1, 2025, to the present day). **Note that this first run is extensive and will take approximately 7-10 hours to complete**.
-If you would like to run a shorter backfill for demonstration purposes, you can change the `start_date` in the `stocks_polygon_ingest.py` DAG:
+5. **Run the Full Pipeline**:
+    * In the Airflow UI (http://localhost:8080), un-pause and trigger the `stocks_polygon_ingest` DAG. This will kick off the entire data pipeline. The initial run will backfill all data for the current year (January 1, 2025, to the present day).
+    * **Note that this first run is extensive and will take approximately 7-10 hours to complete** If you would like to run a shorter backfill for demonstration purposes, you can change the `start_date` in the `stocks_polygon_ingest.py` DAG:
 
     ``` python
     @dag(
@@ -127,7 +118,7 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     )
     ```
 
-7. **Perform an Initial Full Refresh of dbt Models**:
+6. **Perform an Initial Full Refresh of dbt Models**:
     * After the first run of the pipeline completes, it's a good practice to run a full refresh of your dbt models to ensure the incremental logic builds correctly on the complete historical data. Shell into the scheduler container again:
 
     ``` bash
@@ -141,14 +132,17 @@ If you would like to run a shorter backfill for demonstration purposes, you can 
     /usr/local/airflow/dbt_venv/bin/dbt build --full-refresh
     ```
 
-8. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
+7. **View the Dashboard**: Once the pipeline has run successfully, navigate to the Plotly dashboard at [http://localhost:8501](http://localhost:8501) to view and interact with the data.
 
 ## Future Work
 
-This project serves as a strong foundation for a robust financial data platform. The next steps for expanding this project include:
+This project is now feature-complete and serves as a strong foundation for a robust financial data platform. Future enhancements could focus on performance, advanced analysis, and production-hardening.
 
-* [ ] **Add Data Quality Monitoring**: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
-* [ ] **Add Advanced Performance Metrics**: Enhance the backtesting results with more sophisticated metrics like Max Drawdown, Sortino Ratio, and Profit Factor.
+* [ ] **Add Strategy Comparison**: Implement a feature to run two backtests and compare their performance metrics and portfolio values side-by-side.
+* [ ] **Performance Optimization**: Explore performance improvements, such as implementing caching for data loads or using `Numba` to accelerate backtesting calculations.
+* [ ] **Add Alerting**: Integrate the data quality pipeline with Airflow alerts to send an email or Slack notification when a `dbt` test fails.
+* [x] ~~**Add Data Quality Monitoring**~~: Implement more advanced data quality checks and alerting (dbt tests) to monitor the health of the data pipeline and ensure the reliability of the data.
+* [x] ~~**Add Advanced Performance Metrics**~~: Enhance the backtesting results with more sophisticated metrics like Max Drawdown, Sortino Ratio, and Profit Factor.
 
 ## Documentation
 
