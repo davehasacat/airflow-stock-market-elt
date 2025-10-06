@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: fct_tradier__stock_bars_performance
+    description: "Final analytics-ready model for Tradier data showing daily stock performance metrics. This is the primary model for BI tools and analysis."
+    columns:
+      - name: stock_bar_id
+        description: "The unique identifier for a single day's stock bar (ticker + trade_date)."
+        tests:
+          - unique
+          - not_null
+      - name: ticker
+        description: "The stock ticker symbol."
+      - name: trade_date
+        description: "The date of the stock bar."
