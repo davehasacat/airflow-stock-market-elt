@@ -10,7 +10,7 @@ sources:
           warn_after: {count: 1, period: day}
         loaded_at_field: "inserted_at"
       - name: source_tradier_options_bars_daily
-        description: "Raw daily OHLCV data for all option contracts from the Tradier API."
+        description: "Raw daily OHLCV data for all option contracts from Tradier."
         freshness:
           warn_after: {count: 1, period: day}
         loaded_at_field: "inserted_at"
@@ -63,3 +63,11 @@ models:
           column_A: high_price
           column_B: low_price
           or_equal: true
+  - name: stg_tradier__options_bars_casted
+    description: "Cleans and renames data from the options snapshot, selecting only currently valid records."
+    columns:
+      - name: option_bar_id
+        description: "The unique identifier for a single day's option bar."
+        tests:
+          - unique
+          - not_null
