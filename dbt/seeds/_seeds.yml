@@ -13,3 +13,11 @@ seeds:
         description: "The name of the company."
       - name: sector
         description: "The sector of the company."
+  - name: options_tickers
+    description: "A static list of company with the most viewed options chain."
+    columns:
+      - name: ticker
+        description: "The stock ticker symbol."
+        tests:
+          - unique
+          - not_null
