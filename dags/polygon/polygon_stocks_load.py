@@ -14,14 +14,14 @@ from dags.utils.polygon_datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DA
 
 # Define the DAG
 @dag(
-    dag_id="stocks_polygon_load",
+    dag_id="polygon_stocks_load",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     schedule=[S3_MANIFEST_DATASET],
     catchup=False,
     tags=["load", "polygon"],
     dagrun_timeout=timedelta(hours=2),
 )
-def stocks_polygon_load_dag():
+def polygon_stocks_load_dag():
     """
     This DAG is responsible for loading the raw JSON data from S3 into a
     PostgreSQL data warehouse. It is triggered by the completion of the
@@ -195,4 +195,4 @@ def stocks_polygon_load_dag():
     load_op >> key_batches_for_move
 
 # Instantiate the DAG
-stocks_polygon_load_dag()
+polygon_stocks_load_dag()

@@ -13,13 +13,13 @@ from dags.utils.polygon_datasets import S3_MANIFEST_DATASET
 
 # Define the DAG
 @dag(
-    dag_id="stocks_polygon_ingest",
-    start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
+    dag_id="polygon_stocks_ingest",
+    start_date=pendulum.datetime(2025, 10, 1, tz="UTC"),
     schedule="0 0 * * 1-5",
     catchup=True,
     tags=["ingestion", "polygon"],
 )
-def stocks_polygon_ingest_dag():
+def polygon_stocks_ingest_dag():
     """
     This DAG is responsible for ingesting stock market data from the Polygon API.
     It fetches a list of all available stock tickers, batches them, and then
@@ -148,4 +148,4 @@ def stocks_polygon_ingest_dag():
     write_manifest_to_s3(s3_keys_flat)
 
 # Instantiate the DAG
-stocks_polygon_ingest_dag()
+polygon_stocks_ingest_dag()

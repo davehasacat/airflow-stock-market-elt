@@ -13,15 +13,15 @@ from airflow.exceptions import AirflowSkipException
 from dags.utils.tradier_datasets import S3_TRADIER_OPTIONS_MANIFEST_DATASET
 
 @dag(
-    dag_id="options_tradier_ingest",
+    dag_id="tradier_options_ingest",
     start_date=pendulum.datetime(2025, 10, 1, tz="UTC"),
     schedule="0 1 * * 1-5",  # Runs at 1 AM on weekdays
     catchup=True,
     tags=["ingestion", "tradier", "options"],
 )
-def options_tradier_ingest_dag():
+def tradier_options_ingest_dag():
     """
-    This DAG ingests options market data from the Tradier API for S&P 500 stocks.
+    This DAG ingests options market data from the Tradier API for stock tickers.
     It fetches all option contracts for each ticker and then ingests the daily
     OHLCV data for each contract into MinIO S3 storage.
     """
@@ -34,7 +34,7 @@ def options_tradier_ingest_dag():
     @task(pool="api_pool")
     def get_all_option_symbols(**kwargs) -> list[str]:
         """
-        For each S&P 500 ticker, fetches all available expiration dates,
+        For each custom ticker, fetches all available expiration dates,
         then fetches the option chain for each expiration to get all
         individual option contract symbols.
         """
@@ -42,9 +42,9 @@ def options_tradier_ingest_dag():
         api_key = conn.password
         headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
 
-        sp500_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "options_tickers.csv")
+        custom_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "custom_tickers.csv")
         underlying_tickers = []
-        with open(sp500_tickers_path, mode='r') as csvfile:
+        with open(custom_tickers_path, mode='r') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 underlying_tickers.append(row["ticker"])
@@ -160,4 +160,4 @@ def options_tradier_ingest_dag():
     s3_keys_flat = flatten_s3_key_list(processed_keys_nested)
     write_manifest_to_s3(s3_keys_flat)
 
-options_tradier_ingest_dag()
+tradier_options_ingest_dag()

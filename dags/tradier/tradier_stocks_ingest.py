@@ -13,16 +13,16 @@ from airflow.exceptions import AirflowSkipException
 from dags.utils.tradier_datasets import S3_TRADIER_MANIFEST_DATASET
 
 @dag(
-    dag_id="stocks_tradier_ingest",
+    dag_id="tradier_stocks_ingest",
     start_date=pendulum.datetime(2025, 10, 1, tz="UTC"),
     schedule="0 0 * * 1-5",
     catchup=True,
     tags=["ingestion", "tradier"],
 )
-def stocks_tradier_ingest_dag():
+def tradier_stocks_ingest_dag():
     """
-    This DAG ingests S&P 500 stock market data from the Tradier API.
-    It fetches the tickers from the sp500_tickers.csv file, validates them,
+    This DAG ingests stock market data from the Tradier API.
+    It fetches the tickers from the custom_tickers.csv file, validates them,
     batches them, and then ingests the daily OHLCV data for each ticker
     into MinIO S3 storage.
     """
@@ -34,7 +34,7 @@ def stocks_tradier_ingest_dag():
     @task
     def get_and_batch_tickers_to_s3() -> list[str]:
         """
-        Reads S&P 500 tickers from the dbt seed file, validates each ticker
+        Reads stock tickers from the dbt seed file, validates each ticker
         against the Tradier API, and then splits them into smaller batches.
         Each batch is saved as a text file in an S3 bucket for parallel processing.
         """
@@ -48,10 +48,10 @@ def stocks_tradier_ingest_dag():
             "Accept": "application/json"
         }
         
-        sp500_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "sp500_tickers.csv")
+        custom_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "custom_tickers.csv")
         all_tickers = []
         
-        with open(sp500_tickers_path, mode='r') as csvfile:
+        with open(custom_tickers_path, mode='r') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 ticker = row["ticker"]
@@ -191,4 +191,4 @@ def stocks_tradier_ingest_dag():
     write_manifest_to_s3(s3_keys_flat)
 
 # Instantiate the DAG
-stocks_tradier_ingest_dag()
+tradier_stocks_ingest_dag()

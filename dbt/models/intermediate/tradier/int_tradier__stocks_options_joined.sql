@@ -6,8 +6,8 @@
     )
 }}
 
-with options as (select * from {{ ref('stg_tradier__options_bars_enriched') }}),
-stocks as (select * from {{ ref('stg_tradier__stock_bars_enriched') }}),
+with options as (select * from {{ ref('int_tradier__options_bars_enriched') }}),
+stocks as (select * from {{ ref('int_tradier__stock_bars_enriched') }}),
 
 joined as (
 select
