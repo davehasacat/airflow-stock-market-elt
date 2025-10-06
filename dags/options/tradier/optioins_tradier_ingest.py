@@ -42,7 +42,7 @@ def options_tradier_ingest_dag():
         api_key = conn.password
         headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
 
-        sp500_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "sp500_tickers.csv")
+        sp500_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "options_tickers.csv")
         underlying_tickers = []
         with open(sp500_tickers_path, mode='r') as csvfile:
             reader = csv.DictReader(csvfile)
