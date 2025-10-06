@@ -17,7 +17,7 @@ POSTGRES_CONN_ID = os.getenv("POSTGRES_CONN_ID", "postgres_dwh")
 BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
 
 @dag(
-    dag_id="full_stack_connection_test",
+    dag_id="utils_connection_test",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     schedule=None,
     catchup=False,
@@ -28,7 +28,7 @@ BUCKET_NAME = os.getenv("BUCKET_NAME", "test")
     This DAG uses the officially recommended `astronomer-cosmos` package to test the full stack.
     """,
 )
-def full_stack_connection_test_dag():
+def utils_connection_test_dag():
     """
     A DAG to test connections to S3, Postgres, and dbt using Cosmos.
     """
@@ -63,4 +63,4 @@ def full_stack_connection_test_dag():
     # Define task dependencies
     [test_minio_connection(), test_postgres_connection()] >> test_dbt_connection
 
-full_stack_connection_test_dag()
+utils_connection_test_dag()

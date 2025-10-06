@@ -14,7 +14,7 @@ from dags.utils.tradier_datasets import S3_TRADIER_OPTIONS_MANIFEST_DATASET
 
 @dag(
     dag_id="options_tradier_ingest",
-    start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
+    start_date=pendulum.datetime(2025, 10, 1, tz="UTC"),
     schedule="0 1 * * 1-5",  # Runs at 1 AM on weekdays
     catchup=True,
     tags=["ingestion", "tradier", "options"],
@@ -59,7 +59,13 @@ def options_tradier_ingest_dag():
                 exp_response.raise_for_status()
                 exp_data = exp_response.json()
                 
-                expirations = exp_data.get('expirations', {}).get('date', [])
+                # Check if the 'expirations' key exists and is not null
+                expirations_data = exp_data.get('expirations')
+                if not expirations_data:
+                    print(f"No options expirations found for ticker {ticker}. Skipping.")
+                    continue
+
+                expirations = expirations_data.get('date', [])
                 if not isinstance(expirations, list):
                     expirations = [expirations]
 
