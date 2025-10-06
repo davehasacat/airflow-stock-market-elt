@@ -30,7 +30,7 @@ models:
       - name: moving_avg_50d
         description: "The 50-day simple moving average of the closing price."
   - name: int_tradier__options_bars_enriched
-    description: "Enriches daily options data with calculated metrics like DTE. This model is incremental and does not contain any joins."
+    description: "Enriches daily options data with calculated metrics like DTE. This model is incremental."
     columns:
       - name: option_bar_id
         description: "The unique identifier for a single day's option bar."
