@@ -47,3 +47,14 @@ snapshots:
         description: "The date of the stock bar."
         tests:
           - not_null
+  - name: snapshot_tradier_options_bars
+    description: "A snapshot of the daily OHLCV data for all option contracts from the Tradier API."
+    columns:
+      - name: option_symbol
+        description: "The unique OCC symbol for the option contract."
+        tests:
+          - not_null
+      - name: trade_date
+        description: "The date of the option bar."
+        tests:
+          - not_null
