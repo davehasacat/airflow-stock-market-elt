@@ -65,7 +65,7 @@ models:
         description: "The timestamp when the record was loaded into the staging layer."
       - name: days_to_expiration
         description: "The number of days from the trade date to the option's expiration date."
-  - name: int_tradier__options_daily_joined
+  - name: int_tradier__stocks_options_joined
     description: "A final, analytics-ready model that joins daily options data with the daily performance of its underlying stock. This is the primary model for backtesting options strategies. This model is incremental."
     columns:
       - name: option_bar_id
