@@ -4,9 +4,7 @@ import pendulum
 from airflow.decorators import dag
 from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig, ExecutionConfig
 
-# Import the shared Dataset object that this DAG consumes
 # Import email alert function
-from dags.utils.datasets import POSTGRES_DWH_RAW_DATASET
 from dags.utils.utils import send_failure_email
 
 # --- dbt Configuration ---
@@ -18,26 +16,24 @@ DBT_EXECUTABLE_PATH = os.getenv("DBT_EXECUTABLE_PATH")
 @dag(
     dag_id="dbt_build",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
-     # This DAG is scheduled to run only when the POSTGRES_DWH_RAW_DATASET is updated by the 'load' DAG
-    schedule=[POSTGRES_DWH_RAW_DATASET],
+    # This DAG is now scheduled to run at 3 AM on weekdays
+    schedule="0 3 * * 1-5",
     catchup=False,
     tags=["dbt", "build"],
     default_args={
         "on_failure_callback": send_failure_email
     },
     doc_md="""
-    ### dbt Transformation DAG for Polygon.io Data
+    ### dbt Transformation DAG for Stock Market Data
 
-    This DAG is triggered by the `stocks_polygon_load` DAG upon the successful
-    completion of the data loading process. It runs the `dbt build` command
-    to execute all dbt models and tests, transforming the raw data into
-    analytics-ready marts.
+    This DAG runs daily on a fixed schedule. It runs the `dbt build`
+    command to execute all dbt models and tests, transforming the raw data
+    into analytics-ready marts.
     """,
 )
 def dbt_build_dag():
     """
-    This DAG uses DbtTaskGroup to execute dbt models.
-    It is triggered when the raw data table in PostgreSQL is updated.
+    This DAG uses DbtTaskGroup to execute dbt models on a schedule.
     """
     # Define a DbtTaskGroup to run the dbt build command.
     # Cosmos will parse the dbt project and create Airflow tasks for each dbt model and test.
