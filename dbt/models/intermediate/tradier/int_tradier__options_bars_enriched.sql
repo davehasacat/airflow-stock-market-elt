@@ -29,7 +29,7 @@ select
   volume,
   volume_weighted_average_price,
   loaded_at,
-  {{ dbt.date_diff('trade_date', 'expiration_date', 'day') }} as days_to_expiration
+  (expiration_date::date - trade_date::date) as days_to_expiration
 from source
 )
 
