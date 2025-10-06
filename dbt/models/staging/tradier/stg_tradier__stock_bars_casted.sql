@@ -19,6 +19,7 @@ select
   high as high_price,
   low as low_price,
   close as close_price,
+  vwap as volume_weighted_average_price,
   volume
 from source
 )

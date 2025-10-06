@@ -18,6 +18,7 @@ select
   high_price,
   low_price,
   close_price,
+  volume_weighted_average_price,
   moving_avg_20d,
   moving_avg_50d,
   price_change_1d,

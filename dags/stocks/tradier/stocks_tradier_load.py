@@ -51,7 +51,7 @@ def stocks_tradier_load_dag():
     @task
     def transform_batch(batch_of_keys: list[str]) -> dict:
         """
-        Reads a batch of JSON files from S3, extracts the relevant data,
+        Reads a batch of JSON files from S3, extracts the relevant data including VWAP,
         and transforms it into a clean, tabular format. This version handles
         the varying structure of the Tradier API's 'day' field.
         """
@@ -64,16 +64,16 @@ def stocks_tradier_load_dag():
                 ticker = s3_key.split('/')[-1].split('_')[0]
 
                 if data.get('history') and data['history'].get('day'):
-                    # The 'day' field can be a dictionary or a list of dictionaries
                     day_data = data['history']['day']
                     if not isinstance(day_data, list):
-                        day_data = [day_data]  # Ensure it's always a list
+                        day_data = [day_data]
 
                     for day in day_data:
                         clean_records.append({
                             "ticker": ticker,
                             "trade_date": day.get("date"),
                             "volume": day.get("volume"),
+                            "vwap": day.get("vwap"), # .get() will return None if the key doesn't exist
                             "open": day.get("open"),
                             "close": day.get("close"),
                             "high": day.get("high"),
@@ -95,8 +95,7 @@ def stocks_tradier_load_dag():
     def load_to_postgres_incremental(clean_records: list[dict]):
         """
         Loads the transformed records into a PostgreSQL table. This function
-        uses an 'upsert' (update or insert) operation to ensure data integrity
-        and avoid duplicates.
+        uses an 'upsert' operation and now includes a VWAP column that can accept NULLs.
         """
         if not clean_records:
             raise AirflowSkipException("No records to load.")
@@ -105,19 +104,19 @@ def stocks_tradier_load_dag():
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
             ticker TEXT NOT NULL, trade_date DATE NOT NULL, "open" NUMERIC(19, 4),
             high NUMERIC(19, 4), low NUMERIC(19, 4), "close" NUMERIC(19, 4),
-            volume BIGINT,
+            volume BIGINT, vwap NUMERIC(19, 4), -- Re-added vwap column
             inserted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL, PRIMARY KEY (ticker, trade_date)
         );
         """)
         conn = pg_hook.get_conn()
         try:
             with conn.cursor() as cursor:
-                cols = ["ticker", "trade_date", "volume", "open", "close", "high", "low"]
+                cols = ["ticker", "trade_date", "volume", "vwap", "open", "close", "high", "low"]
                 values = [tuple(rec.get(col) for col in cols) for rec in clean_records]
                 upsert_sql = f"""
                     INSERT INTO {POSTGRES_TABLE} ({', '.join(f'"{c}"' for c in cols)}) VALUES %s
                     ON CONFLICT (ticker, trade_date) DO UPDATE SET
-                        volume = EXCLUDED.volume, "open" = EXCLUDED."open",
+                        volume = EXCLUDED.volume, vwap = EXCLUDED.vwap, "open" = EXCLUDED."open",
                         "close" = EXCLUDED."close", high = EXCLUDED.high, low = EXCLUDED.low,
                         inserted_at = NOW();
                 """
@@ -140,12 +139,10 @@ def stocks_tradier_load_dag():
         if not s3_key_batch:
             print("No S3 keys in this batch to move.")
             return
-
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         source_prefix = "raw_data/tradier/"
         dest_prefix = "processed/tradier/"
         copied_keys_for_deletion = []
-
         for s3_key in s3_key_batch:
             try:
                 dest_key = s3_key.replace(source_prefix, dest_prefix, 1)

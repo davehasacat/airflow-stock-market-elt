@@ -19,15 +19,42 @@ models:
         tests:
           - unique
           - not_null
+          - dbt_expectations.expect_column_values_to_match_regex:
+              arguments:
+                regex: '^[A-Z0-9\.]+_[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+      - name: trade_date
+        description: "The date of the stock bar."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_of_type:
+              column_type: date
+      - name: open_price
+        description: "The opening price for the day."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+              row_condition: "ticker not like '%%CASH%%'"
+      - name: high_price
+        description: "The highest price for the day."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
+      - name: low_price
+        description: "The lowest price for the day."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
       - name: close_price
         description: "The closing price for the day."
         tests:
           - dbt_expectations.expect_column_values_to_be_between:
-              arguments:
-                min_value: 0
+              min_value: 0
+      - name: volume
+        description: "The trading volume for the day."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              min_value: 0
     tests:
       - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
-          arguments:
-            column_A: high_price
-            column_B: low_price
-            or_equal: true
+          column_A: high_price
+          column_B: low_price
+          or_equal: true

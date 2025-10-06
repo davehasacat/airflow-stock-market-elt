@@ -24,6 +24,7 @@ select
   high_price,
   low_price,
   close_price,
+  volume_weighted_average_price,
   avg(close_price) over (partition by ticker order by trade_date rows between 19 preceding and current row) as moving_avg_20d,
   avg(close_price) over (partition by ticker order by trade_date rows between 49 preceding and current row) as moving_avg_50d,
   avg(close_price) over (partition by ticker order by trade_date rows between 119 preceding and current row) as moving_avg_120d,

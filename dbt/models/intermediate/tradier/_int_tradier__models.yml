@@ -9,3 +9,23 @@ models:
         tests:
           - unique
           - not_null
+      - name: ticker
+        description: "The stock ticker symbol."
+      - name: trade_date
+        description: "The date of the stock bar."
+      - name: loaded_at
+        description: "The timestamp when the record was loaded into the staging layer."
+      - name: open_price
+        description: "The opening price for the day."
+      - name: high_price
+        description: "The highest price for the day."
+      - name: low_price
+        description: "The lowest price for the day."
+      - name: close_price
+        description: "The closing price for the day."
+      - name: volume
+        description: "The trading volume for the day."
+      - name: moving_avg_20d
+        description: "The 20-day simple moving average of the closing price."
+      - name: moving_avg_50d
+        description: "The 50-day simple moving average of the closing price."
