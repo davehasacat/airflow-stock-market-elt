@@ -51,7 +51,7 @@ def stocks_tradier_load_dag():
     @task
     def transform_batch(batch_of_keys: list[str]) -> dict:
         """
-        Reads a batch of JSON files from S3, extracts the relevant data,
+        Reads a batch of JSON files from S3, extracts the relevant data including VWAP,
         and transforms it into a clean, tabular format. This version handles
         the varying structure of the Tradier API's 'day' field.
         """
@@ -74,6 +74,7 @@ def stocks_tradier_load_dag():
                             "ticker": ticker,
                             "trade_date": day.get("date"),
                             "volume": day.get("volume"),
+                            "vwap": day.get("vwap"),
                             "open": day.get("open"),
                             "close": day.get("close"),
                             "high": day.get("high"),
@@ -93,6 +94,11 @@ def stocks_tradier_load_dag():
 
     @task(outlets=[POSTGRES_DWH_TRADIER_RAW_DATASET])
     def load_to_postgres_incremental(clean_records: list[dict]):
+        """
+        Loads the transformed records into a PostgreSQL table. This function
+        uses an 'upsert' (update or insert) operation to ensure data integrity
+        and avoid duplicates. It now includes the VWAP column.
+        """
         if not clean_records:
             raise AirflowSkipException("No records to load.")
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
@@ -100,19 +106,19 @@ def stocks_tradier_load_dag():
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
             ticker TEXT NOT NULL, trade_date DATE NOT NULL, "open" NUMERIC(19, 4),
             high NUMERIC(19, 4), low NUMERIC(19, 4), "close" NUMERIC(19, 4),
-            volume BIGINT, inserted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
-            PRIMARY KEY (ticker, trade_date)
+            volume BIGINT, vwap NUMERIC(19, 4),
+            inserted_at TIMESTAMPTZ DEFAULT NOW() NOT NULL, PRIMARY KEY (ticker, trade_date)
         );
         """)
         conn = pg_hook.get_conn()
         try:
             with conn.cursor() as cursor:
-                cols = ["ticker", "trade_date", "volume", "open", "close", "high", "low"]
+                cols = ["ticker", "trade_date", "volume", "vwap", "open", "close", "high", "low"]
                 values = [tuple(rec.get(col) for col in cols) for rec in clean_records]
                 upsert_sql = f"""
                     INSERT INTO {POSTGRES_TABLE} ({', '.join(f'"{c}"' for c in cols)}) VALUES %s
                     ON CONFLICT (ticker, trade_date) DO UPDATE SET
-                        volume = EXCLUDED.volume, "open" = EXCLUDED."open",
+                        volume = EXCLUDED.volume, vwap = EXCLUDED.vwap, "open" = EXCLUDED."open",
                         "close" = EXCLUDED."close", high = EXCLUDED.high, low = EXCLUDED.low,
                         inserted_at = NOW();
                 """
