@@ -9,6 +9,11 @@ sources:
         freshness:
           warn_after: {count: 1, period: day}
         loaded_at_field: "inserted_at"
+      - name: source_tradier_options_bars_daily
+        description: "Raw daily OHLCV data for all option contracts from the Tradier API."
+        freshness:
+          warn_after: {count: 1, period: day}
+        loaded_at_field: "inserted_at"
 
 models:
   - name: stg_tradier__stock_bars_casted
