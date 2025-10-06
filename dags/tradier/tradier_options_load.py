@@ -37,14 +37,14 @@ def parse_option_symbol(symbol):
     }
 
 @dag(
-    dag_id="options_tradier_load",
+    dag_id="tradier_options_load",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     schedule=[S3_TRADIER_OPTIONS_MANIFEST_DATASET],
     catchup=False,
     tags=["load", "tradier", "options"],
     dagrun_timeout=timedelta(hours=4),
 )
-def options_tradier_load_dag():
+def tradier_options_load_dag():
     """
     This DAG loads raw JSON options data from S3 (sourced from Tradier)
     into a PostgreSQL data warehouse. It is triggered by the completion of the
@@ -200,4 +200,4 @@ def options_tradier_load_dag():
 
     load_op >> keys_to_move
 
-options_tradier_load_dag()
+tradier_options_load_dag()
