@@ -21,7 +21,7 @@ from dags.utils.tradier_datasets import S3_TRADIER_OPTIONS_MANIFEST_DATASET
 )
 def options_tradier_ingest_dag():
     """
-    This DAG ingests options market data from the Tradier API for S&P 500 stocks.
+    This DAG ingests options market data from the Tradier API for stock tickers.
     It fetches all option contracts for each ticker and then ingests the daily
     OHLCV data for each contract into MinIO S3 storage.
     """
@@ -34,7 +34,7 @@ def options_tradier_ingest_dag():
     @task(pool="api_pool")
     def get_all_option_symbols(**kwargs) -> list[str]:
         """
-        For each S&P 500 ticker, fetches all available expiration dates,
+        For each custom ticker, fetches all available expiration dates,
         then fetches the option chain for each expiration to get all
         individual option contract symbols.
         """
@@ -42,9 +42,9 @@ def options_tradier_ingest_dag():
         api_key = conn.password
         headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
 
-        sp500_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "options_tickers.csv")
+        custom_tickers_path = os.path.join(DBT_PROJECT_DIR, "seeds", "custom_tickers.csv")
         underlying_tickers = []
-        with open(sp500_tickers_path, mode='r') as csvfile:
+        with open(custom_tickers_path, mode='r') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 underlying_tickers.append(row["ticker"])
