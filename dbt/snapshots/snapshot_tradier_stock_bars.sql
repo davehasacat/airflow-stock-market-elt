@@ -17,6 +17,7 @@ select
   high,
   low,
   close,
+  vwap,
   volume
 from {{ source('public', 'source_tradier_stock_bars_daily') }}
 
