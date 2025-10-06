@@ -14,7 +14,7 @@ from dags.utils.tradier_datasets import S3_TRADIER_MANIFEST_DATASET
 
 @dag(
     dag_id="stocks_tradier_ingest",
-    start_date=pendulum.datetime(2025, 9, 1, tz="UTC"),
+    start_date=pendulum.datetime(2025, 10, 1, tz="UTC"),
     schedule="0 0 * * 1-5",
     catchup=True,
     tags=["ingestion", "tradier"],
