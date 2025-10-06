@@ -12,14 +12,14 @@ from psycopg2.extras import execute_values
 from dags.utils.tradier_datasets import S3_TRADIER_MANIFEST_DATASET, POSTGRES_DWH_TRADIER_RAW_DATASET
 
 @dag(
-    dag_id="stocks_tradier_load",
+    dag_id="tradier_stocks_load",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
     schedule=[S3_TRADIER_MANIFEST_DATASET],
     catchup=False,
     tags=["load", "tradier"],
     dagrun_timeout=timedelta(hours=2),
 )
-def stocks_tradier_load_dag():
+def tradier_stocks_load_dag():
     """
     This DAG loads raw JSON data for S&P 500 stocks from S3 (sourced from Tradier)
     into a PostgreSQL data warehouse. It's triggered by the completion of the
@@ -170,4 +170,4 @@ def stocks_tradier_load_dag():
 
     load_op >> key_batches_for_move
 
-stocks_tradier_load_dag()
+tradier_stocks_load_dag()

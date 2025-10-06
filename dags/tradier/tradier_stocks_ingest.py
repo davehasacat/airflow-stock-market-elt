@@ -13,13 +13,13 @@ from airflow.exceptions import AirflowSkipException
 from dags.utils.tradier_datasets import S3_TRADIER_MANIFEST_DATASET
 
 @dag(
-    dag_id="stocks_tradier_ingest",
+    dag_id="tradier_stocks_ingest",
     start_date=pendulum.datetime(2025, 10, 1, tz="UTC"),
     schedule="0 0 * * 1-5",
     catchup=True,
     tags=["ingestion", "tradier"],
 )
-def stocks_tradier_ingest_dag():
+def tradier_stocks_ingest_dag():
     """
     This DAG ingests S&P 500 stock market data from the Tradier API.
     It fetches the tickers from the sp500_tickers.csv file, validates them,
@@ -191,4 +191,4 @@ def stocks_tradier_ingest_dag():
     write_manifest_to_s3(s3_keys_flat)
 
 # Instantiate the DAG
-stocks_tradier_ingest_dag()
+tradier_stocks_ingest_dag()
