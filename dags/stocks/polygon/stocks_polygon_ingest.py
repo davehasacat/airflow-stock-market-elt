@@ -9,7 +9,7 @@ from airflow.hooks.base import BaseHook
 from airflow.exceptions import AirflowSkipException
 
 # Import the shared Dataset object, which is used for data-driven scheduling
-from dags.utils.datasets import S3_MANIFEST_DATASET
+from dags.utils.polygon_datasets import S3_MANIFEST_DATASET
 
 # Define the DAG
 @dag(

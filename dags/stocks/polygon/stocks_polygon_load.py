@@ -10,7 +10,7 @@ from airflow.exceptions import AirflowSkipException
 from psycopg2.extras import execute_values
 
 # Import the shared Dataset objects for data-driven scheduling
-from dags.utils.datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
+from dags.utils.polygon_datasets import S3_MANIFEST_DATASET, POSTGRES_DWH_RAW_DATASET
 
 # Define the DAG
 @dag(
