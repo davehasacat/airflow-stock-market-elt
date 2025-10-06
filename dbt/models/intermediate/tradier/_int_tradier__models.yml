@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: int_tradier__stock_bars_enriched
+    description: "Enriches the daily stock bar data from Tradier with calculated technical indicators like moving averages. This model is incremental."
+    columns:
+      - name: stock_bar_id
+        description: "The unique identifier for a single day's stock bar (ticker + trade_date)."
+        tests:
+          - unique
+          - not_null

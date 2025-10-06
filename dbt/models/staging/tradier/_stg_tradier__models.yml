@@ -1,0 +1,33 @@
+version: 2
+
+sources:
+  - name: public
+    description: "Raw data loaded from the stock market ELT pipeline."
+    tables:
+      - name: source_tradier_stock_bars_daily
+        description: "Raw daily OHLCV data for all tickers from Tradier."
+        freshness:
+          warn_after: {count: 1, period: day}
+        loaded_at_field: "inserted_at"
+
+models:
+  - name: stg_tradier__stock_bars_casted
+    description: "Cleans and renames data from the stock_bars snapshot for Tradier, selecting only the currently valid records. This model serves as the foundation for all downstream transformations."
+    columns:
+      - name: stock_bar_id
+        description: "The unique identifier for a single day's stock bar."
+        tests:
+          - unique
+          - not_null
+      - name: close_price
+        description: "The closing price for the day."
+        tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+    tests:
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: high_price
+            column_B: low_price
+            or_equal: true
