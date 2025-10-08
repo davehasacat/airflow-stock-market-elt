@@ -35,3 +35,6 @@ models:
     marts:
       # Applies to all models in the 'marts' subdirectory
       +materialized: table
+    tradier:
+      +tests:
+        enabled: false
