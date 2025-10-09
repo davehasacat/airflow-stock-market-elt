@@ -63,7 +63,6 @@ def polygon_options_ingest_backfill_dag():
         print(f"Found {len(all_option_symbols)} total option contracts to process.")
         return all_option_symbols
 
-    # --- NEW TASK ---
     # Add a new task to batch the symbols into smaller chunks
     @task
     def batch_option_symbols(symbol_list: list[str]) -> list[list[str]]:
@@ -71,7 +70,6 @@ def polygon_options_ingest_backfill_dag():
         batch_size = 500  # Process 500 symbols per parallel task
         return [symbol_list[i:i + batch_size] for i in range(0, len(symbol_list), batch_size)]
 
-    # --- MODIFIED TASK ---
     # This task now processes a batch of symbols instead of a single one
     @task(retries=3, retry_delay=pendulum.duration(minutes=10), pool="api_pool")
     def process_symbol_batch_backfill(symbol_batch: list[str], **kwargs) -> list[str]:
