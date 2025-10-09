@@ -59,3 +59,13 @@ models:
         description: "The volume-weighted average price for the day."
       - name: days_to_expiration
         description: "The number of days from the trade date to the option's expiration date."
+  - name: int_polygon__stocks_options_joined
+    description: "Joins enriched options and stock data to create a comprehensive view for analysis. This model is incremental."
+    columns:
+      - name: option_bar_id
+        description: "The unique identifier for a single day's option bar."
+        tests:
+          - unique
+          - not_null
+      - name: moneyness
+        description: "Indicates if the option is in-the-money, at-the-money, or out-of-the-money."

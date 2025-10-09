@@ -31,13 +31,13 @@ select
   t2.moving_avg_50d as underlying_moving_avg_50d,
   t2.moving_avg_120d as underlying_moving_avg_120d,
   case
-  when (t1.strike_price = t2.close_price) then 'at-the-money'
-  when (t1.option_type = 'call' and t1.strike_price < t2.close_price)
-  or (t1.option_type = 'put' and t1.strike_price > t2.close_price)
-  then 'in-the-money'
-  else 'out-of-the-money'
+    when (t1.strike_price = t2.close_price) then 'at-the-money'
+    when (t1.option_type = 'call' and t1.strike_price < t2.close_price)
+      or (t1.option_type = 'put' and t1.strike_price > t2.close_price)
+      then 'in-the-money'
+    else 'out-of-the-money'
   end as moneyness
-
+  
 from options t1
 left join stocks t2
 
