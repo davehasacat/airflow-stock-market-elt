@@ -30,15 +30,15 @@ S3_POLYGON_OPTIONS_MANIFEST_DATASET = Dataset("s3://test/manifests/polygon_optio
     doc_md="""
     ## Polygon Options Daily Ingest DAG
 
-    This DAG orchestrates the daily ingestion of options data from the Polygon API.
+    This DAG orchestrates the daily ingestion of options data from the Polygon API, running every weekday.
 
     ### Process:
-    1.  **Get Tickers**: Fetches a list of underlying stock tickers (e.g., AAPL, SPY) from a pre-defined dbt seed table in the data warehouse.
+    1.  **Get Tickers**: Fetches a list of underlying stock tickers from the `custom_tickers` dbt seed.
     2.  **Fetch and Save Options Data**: For each ticker, it performs two main API calls in a loop:
-        a.  **Find Contracts**: It fetches all option contracts for the ticker that are either currently active or will be in the future. This is done by querying the `/v3/reference/options/contracts` endpoint.
+        a.  **Find Contracts**: It fetches all option contracts for the ticker that are either currently active or will be in the future by querying the `/v3/reference/options/contracts` endpoint.
         b.  **Fetch Daily Bar**: For each contract found, it fetches the daily aggregate bar (OHLCV) for the DAG's execution date using the `/v2/aggs/ticker/...` endpoint.
         c.  **Save to S3**: The raw JSON response for each contract's daily bar is saved to a unique file in the S3 bucket.
-    3.  **Create Manifest**: After all tickers have been processed, it gathers the S3 keys of all the newly saved files and writes them into a single manifest file in S3. This manifest update triggers the downstream `polygon_options_load` DAG via the `S3_POLYGON_OPTIONS_MANIFEST_DATASET`.
+    3.  **Create Manifest**: After all tickers have been processed, it gathers the S3 keys of all the newly saved files and writes them into a single manifest file. This manifest update triggers the downstream `polygon_options_load` DAG.
     """,
 )
 def polygon_options_ingest_daily_dag():
@@ -53,21 +53,20 @@ def polygon_options_ingest_daily_dag():
     @task
     def get_tickers_from_dwh() -> list[str]:
         """
-        Retrieves a list of stock tickers from the `sp500_tickers` seed table,
-        which is expected to be maintained by a separate dbt process. This
+        Retrieves a list of stock tickers from the `custom_tickers` seed table,
+        which is expected to be maintained by a dbt process. This list
         determines which underlyings to fetch options data for.
         """
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
-        sql = "SELECT ticker FROM public.sp500_tickers;"
+        sql = "SELECT ticker FROM public.custom_tickers;"
         records = pg_hook.get_records(sql)
         
-        # If the dbt seed table is empty, use a fallback list for testing.
+        # If the dbt seed table is empty or hasn't been seeded, skip the DAG run.
         if not records:
-            print("No tickers found in DWH, using fallback list.")
-            return ["AAPL", "MSFT", "SPY"]
+            raise AirflowSkipException("No tickers found in the dbt seed 'custom_tickers'. Run 'dbt seed' first.")
             
         tickers = [row[0] for row in records]
-        print(f"Retrieved {len(tickers)} tickers from DWH.")
+        print(f"Retrieved {len(tickers)} tickers from the 'custom_tickers' seed.")
         return tickers
 
     @task(pool="polygon") # Uses a custom pool to limit concurrent API calls.
