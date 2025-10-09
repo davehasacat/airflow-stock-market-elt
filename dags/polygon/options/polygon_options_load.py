@@ -21,7 +21,6 @@ def parse_option_symbol(symbol):
     Parses a standard Polygon option symbol to extract its components.
     Example: O:SPY251219C00150000
     """
-    # Strip the leading "O:" prefix from Polygon's symbol format
     if symbol.startswith("O:"):
         symbol = symbol[2:]
 
@@ -42,7 +41,6 @@ def parse_option_symbol(symbol):
         "option_type": option_type,
         "strike_price": strike_price
     }
-
 
 @dag(
     dag_id="polygon_options_load",
@@ -65,7 +63,7 @@ def polygon_options_load_dag():
     BATCH_SIZE = 1000
 
     @task
-    def get_s3_keys_from_manifest() -> list[str]:
+    def get_and_batch_s3_keys() -> list[list[str]]:
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
         manifest_key = "manifests/polygon_options_manifest_latest.txt"
         if not s3_hook.check_for_key(manifest_key, bucket_name=BUCKET_NAME):
@@ -76,60 +74,12 @@ def polygon_options_load_dag():
         if not s3_keys:
             raise AirflowSkipException("Manifest file is empty. No keys to process.")
         
-        print(f"Found {len(s3_keys)} S3 keys to process from Polygon options manifest.")
-        return s3_keys
-
-    @task
-    def batch_s3_keys(s3_keys: list[str]) -> list[list[str]]:
+        print(f"Found {len(s3_keys)} S3 keys. Batching into groups of {BATCH_SIZE}.")
         return [s3_keys[i:i + BATCH_SIZE] for i in range(0, len(s3_keys), BATCH_SIZE)]
-
+    
     @task
-    def transform_batch(batch_of_keys: list[str]) -> dict:
-        s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-        clean_records, successful_keys = [], []
-        for s3_key in batch_of_keys:
-            try:
-                file_content = s3_hook.read_key(key=s3_key, bucket_name=BUCKET_NAME)
-                data = json.loads(file_content)
-
-                option_symbol = data["ticker"]
-                contract_details = parse_option_symbol(option_symbol)
-                if not contract_details:
-                    print(f"Skipping file with invalid option symbol format: {s3_key}")
-                    continue
-
-                if data.get("resultsCount") == 1 and data.get("results"):
-                    result = data["results"][0]
-                    record = {
-                        "option_symbol": option_symbol,
-                        "trade_date": pendulum.from_timestamp(result["t"] / 1000).to_date_string(),
-                        "volume": result.get("v"),
-                        "vwap": result.get("vw"),
-                        "open": result.get("o"),
-                        "close": result.get("c"),
-                        "high": result.get("h"),
-                        "low": result.get("l"),
-                        "transactions": result.get("n"),
-                    }
-                    record.update(contract_details)
-                    clean_records.append(record)
-                    successful_keys.append(s3_key)
-            except (json.JSONDecodeError, KeyError, TypeError) as e:
-                print(f"Skipping file {s3_key} due to processing error: {e}")
-                continue
-        return {"records": clean_records, "keys": successful_keys}
-
-    @task
-    def flatten_results(transformed_batches: list[dict]) -> dict:
-        all_records = [rec for batch in transformed_batches for rec in batch['records'] if rec]
-        all_keys = [key for batch in transformed_batches for key in batch['keys'] if key]
-        return {"records": all_records, "keys": all_keys}
-
-    @task(outlets=[POSTGRES_DWH_POLYGON_OPTIONS_RAW_DATASET])
-    def load_to_postgres_incremental(clean_records: list[dict]):
-        if not clean_records:
-            raise AirflowSkipException("No records to load.")
-        
+    def create_table():
+        """Creates the target table if it doesn't exist."""
         pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
         pg_hook.run(f"""
         CREATE TABLE IF NOT EXISTS {POSTGRES_TABLE} (
@@ -142,53 +92,109 @@ def polygon_options_load_dag():
             PRIMARY KEY (option_symbol, trade_date)
         );
         """)
-        
-        conn = pg_hook.get_conn()
-        try:
-            with conn.cursor() as cursor:
-                cols = [
-                    "option_symbol", "trade_date", "underlying_ticker", "expiration_date",
-                    "strike_price", "option_type", "open", "high", "low", "close",
-                    "volume", "vwap", "transactions"
-                ]
-                values = [tuple(rec.get(col) for col in cols) for rec in clean_records]
-                upsert_sql = f"""
-                    INSERT INTO {POSTGRES_TABLE} ({', '.join(f'"{c}"' for c in cols)}) VALUES %s
-                    ON CONFLICT (option_symbol, trade_date) DO UPDATE SET
-                        underlying_ticker = EXCLUDED.underlying_ticker,
-                        expiration_date = EXCLUDED.expiration_date,
-                        strike_price = EXCLUDED.strike_price, option_type = EXCLUDED.option_type,
-                        "open" = EXCLUDED."open", high = EXCLUDED.high, low = EXCLUDED.low,
-                        "close" = EXCLUDED."close", volume = EXCLUDED.volume, vwap = EXCLUDED.vwap,
-                        transactions = EXCLUDED.transactions, inserted_at = NOW();
-                """
-                execute_values(cursor, upsert_sql, values)
-        finally:
-            conn.commit()
-            conn.close()
-            print(f"Successfully merged {len(clean_records)} records into {POSTGRES_TABLE}.")
 
     @task
-    def move_s3_files_to_processed(s3_keys: list[str]):
-        if not s3_keys:
-            return
+    def transform_batch(batch_of_keys: list[str]) -> dict:
         s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
-        s3_hook.copy_object(
-            source_bucket_key=s3_keys,
-            dest_bucket_key=[k.replace("raw_data/options/", "processed/options/", 1) for k in s3_keys],
-            source_bucket_name=BUCKET_NAME,
-            dest_bucket_name=BUCKET_NAME,
-        )
-        s3_hook.delete_objects(bucket=BUCKET_NAME, keys=s3_keys)
-        print(f"Successfully moved {len(s3_keys)} files to processed directory.")
+        clean_records, successful_keys = [], []
+        for s3_key in batch_of_keys:
+            try:
+                file_content = s3_hook.read_key(key=s3_key, bucket_name=BUCKET_NAME)
+                data = json.loads(file_content)
+                option_symbol = data.get("ticker")
+                if not option_symbol:
+                    continue
+                
+                contract_details = parse_option_symbol(option_symbol)
+                if not contract_details:
+                    print(f"Skipping file with invalid option symbol format: {s3_key}")
+                    continue
+
+                if data.get("resultsCount") == 1 and data.get("results"):
+                    result = data["results"][0]
+                    record = {
+                        "option_symbol": option_symbol,
+                        "trade_date": pendulum.from_timestamp(result["t"] / 1000).to_date_string(),
+                        "volume": result.get("v"), "vwap": result.get("vw"),
+                        "open": result.get("o"), "close": result.get("c"),
+                        "high": result.get("h"), "low": result.get("l"),
+                        "transactions": result.get("n"),
+                    }
+                    record.update(contract_details)
+                    clean_records.append(record)
+                    successful_keys.append(s3_key)
+            except (json.JSONDecodeError, KeyError, TypeError) as e:
+                print(f"Skipping file {s3_key} due to processing error: {e}")
+                continue
+        return {"records": clean_records, "keys": successful_keys}
+
+    @task(outlets=[POSTGRES_DWH_POLYGON_OPTIONS_RAW_DATASET])
+    def process_and_load_batch(transformed_data: dict):
+        clean_records = transformed_data["records"]
+        s3_key_batch = transformed_data["keys"]
+
+        if not clean_records:
+            print("No records in this batch to load.")
+        else:
+            pg_hook = PostgresHook(postgres_conn_id=POSTGRES_CONN_ID)
+            conn = pg_hook.get_conn()
+            try:
+                with conn.cursor() as cursor:
+                    cols = [
+                        "option_symbol", "trade_date", "underlying_ticker", "expiration_date",
+                        "strike_price", "option_type", "open", "high", "low", "close",
+                        "volume", "vwap", "transactions"
+                    ]
+                    values = [tuple(rec.get(col) for col in cols) for rec in clean_records]
+                    upsert_sql = f"""
+                        INSERT INTO {POSTGRES_TABLE} ({', '.join(f'"{c}"' for c in cols)}) VALUES %s
+                        ON CONFLICT (option_symbol, trade_date) DO UPDATE SET
+                            underlying_ticker = EXCLUDED.underlying_ticker,
+                            expiration_date = EXCLUDED.expiration_date,
+                            strike_price = EXCLUDED.strike_price, option_type = EXCLUDED.option_type,
+                            "open" = EXCLUDED."open", high = EXCLUDED.high, low = EXCLUDED.low,
+                            "close" = EXCLUDED."close", volume = EXCLUDED.volume, vwap = EXCLUDED.vwap,
+                            transactions = EXCLUDED.transactions, inserted_at = NOW();
+                    """
+                    execute_values(cursor, upsert_sql, values)
+            finally:
+                conn.commit()
+                conn.close()
+                print(f"Successfully merged {len(clean_records)} records from batch.")
+
+        if not s3_key_batch:
+            print("No S3 keys in this batch to move.")
+            return
+
+        s3_hook = S3Hook(aws_conn_id=S3_CONN_ID)
+        source_prefix = "raw_data/options/"
+        dest_prefix = "processed/options/"
+        
+        copied_keys = []
+        for s3_key in s3_key_batch:
+            try:
+                dest_key = s3_key.replace(source_prefix, dest_prefix, 1)
+                s3_hook.copy_object(
+                    source_bucket_key=s3_key, dest_bucket_key=dest_key,
+                    source_bucket_name=BUCKET_NAME, dest_bucket_name=BUCKET_NAME
+                )
+                copied_keys.append(s3_key)
+            except Exception as e:
+                print(f"ERROR: Failed to copy '{s3_key}'. Error: {e}")
+
+        if copied_keys:
+            s3_hook.delete_objects(bucket=BUCKET_NAME, keys=copied_keys)
+            print(f"Successfully moved {len(copied_keys)} files in batch.")
+
 
     # --- Task Flow Definition ---
-    s3_keys = get_s3_keys_from_manifest()
-    key_batches = batch_s3_keys(s3_keys)
-    transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
-    flat_data = flatten_results(transformed_batches)
-    load_op = load_to_postgres_incremental(flat_data["records"])
+    key_batches = get_and_batch_s3_keys()
+    table_created = create_table()
     
-    load_op >> move_s3_files_to_processed(flat_data["keys"])
+    # Ensure the table is created before any parallel tasks start
+    transformed_batches = transform_batch.expand(batch_of_keys=key_batches)
+    table_created >> transformed_batches
+    
+    process_and_load_batch.expand(transformed_data=transformed_batches)
 
 polygon_options_load_dag()
