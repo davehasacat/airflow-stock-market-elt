@@ -70,3 +70,39 @@ models:
             column_A: high_price
             column_B: low_price
             or_equal: true
+  - name: stg_polygon__options_bars_casted
+    description: "Cleans and renames data from the options snapshot, selecting only currently valid records."
+    columns:
+      - name: option_bar_id
+        description: "The unique identifier for a single day's option bar (symbol + trade_date)."
+        tests:
+          - unique
+          - not_null
+      - name: option_symbol
+        description: "The unique symbol for the option contract."
+      - name: underlying_ticker
+        description: "The ticker symbol of the underlying stock."
+      - name: trade_date
+        description: "The date of the option bar."
+      - name: expiration_date
+        description: "The expiration date of the option contract."
+      - name: strike_price
+        description: "The strike price of the option contract."
+      - name: option_type
+        description: "The type of option (call or put)."
+      - name: open_price
+        description: "The opening price for the day."
+      - name: high_price
+        description: "The highest price for the day."
+      - name: low_price
+        description: "The lowest price for the day."
+      - name: close_price
+        description: "The closing price for the day."
+      - name: volume
+        description: "The trading volume for the day."
+      - name: volume_weighted_average_price
+        description: "The volume-weighted average price for the day."
+      - name: transactions
+        description: "The number of transactions for the day."
+      - name: loaded_at
+        description: "The timestamp when the record was loaded into the raw source table."
